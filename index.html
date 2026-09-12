@@ -3,73 +3,122 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Practice Desk — Guitar Drums</title>
+    <title>Practice Desk — Metal guitar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0b0c'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff4e2a'/%3E%3C/svg%3E"
+    />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <main class="app">
-      <header>
-        <p class="eyebrow">Practice Desk</p>
-        <h1>Guitar drums</h1>
-        <p class="sub">Library, drills, and BPM ramp. Real kit, not a click.</p>
+    <div class="grain" aria-hidden="true"></div>
+    <main class="desk">
+      <header class="top">
+        <div class="brand">
+          <p class="eyebrow">Practice Desk</p>
+          <h1>Metal guitar</h1>
+        </div>
+        <div class="top-controls">
+          <div class="mix" role="radiogroup" aria-label="Mix">
+            <button type="button" class="mix-btn" role="radio" data-mix="click">Click</button>
+            <button type="button" class="mix-btn" role="radio" data-mix="kit">Kit</button>
+            <button type="button" class="mix-btn" role="radio" data-mix="both" aria-checked="true">Both</button>
+          </div>
+          <label class="vol">
+            <span>Vol</span>
+            <input id="volume" type="range" min="-30" max="0" step="1" value="-8" />
+          </label>
+        </div>
       </header>
 
-      <section class="panel" aria-label="Pattern library">
-        <label class="field">
-          <span>Pattern</span>
-          <select id="pattern-select"></select>
-        </label>
-        <p id="pattern-desc" class="hint"></p>
-        <p id="wheel-label" class="hint muted" hidden></p>
-      </section>
-
-      <section class="panel controls" aria-label="Transport">
-        <button id="play" type="button" class="play">Play</button>
-        <label class="bpm">
-          <span>BPM</span>
-          <input id="bpm" type="range" min="60" max="160" value="90" />
+      <section class="stage" aria-label="Now playing">
+        <p class="kicker" id="pattern-sub">AILD / metalcore</p>
+        <h2 id="pattern-name">16th chug</h2>
+        <div class="bpm-hero">
           <output id="bpm-value" for="bpm">90</output>
-        </label>
+          <span class="bpm-unit">BPM</span>
+        </div>
+        <p id="status" class="status" aria-live="polite">Ready · space to play</p>
+        <div id="beat-pads" class="pads" aria-hidden="true"></div>
       </section>
 
-      <section class="panel" aria-label="BPM ramp">
+      <section class="grid-panel" aria-label="16th grid">
+        <div class="grid-head">
+          <span class="grid-title">Subdivision</span>
+          <span id="step-syllable" class="syllable-now">1</span>
+        </div>
+        <div id="syllables" class="syllables"></div>
+        <div id="step-grid" class="step-grid"></div>
+        <div id="track-rows" class="tracks"></div>
+      </section>
+
+      <section class="transport" aria-label="Transport">
+        <button id="play" type="button" class="play">Play</button>
+        <label class="bpm-slider">
+          <span>Tempo</span>
+          <input id="bpm" type="range" min="50" max="180" value="90" />
+        </label>
+        <div id="pattern-chips" class="chips" role="listbox" aria-label="Patterns"></div>
+      </section>
+
+      <section class="neck-panel" aria-label="Scale viewer">
+        <div class="grid-head">
+          <span class="grid-title">Fretboard</span>
+          <span id="scale-formula" class="scale-formula">A harmonic minor</span>
+        </div>
+        <div class="neck-controls">
+          <label class="field">
+            <span>Scale</span>
+            <select id="scale-select"></select>
+          </label>
+          <label class="field">
+            <span>Root</span>
+            <select id="root-select"></select>
+          </label>
+        </div>
+        <div id="scale-patterns" class="chips" role="listbox" aria-label="Scale patterns"></div>
+        <p id="scale-hint" class="hint"></p>
+        <div id="fretboard" class="fretboard"></div>
+      </section>
+
+      <section class="extras">
         <label class="check">
-          <input id="ramp-enabled" type="checkbox" />
-          <span>BPM ramp (drills)</span>
+          <input id="count-in" type="checkbox" checked />
+          <span>Count-in</span>
         </label>
-        <div class="ramp-row">
-          <label class="field tight">
-            <span>Start</span>
-            <input id="ramp-start" type="number" min="50" max="160" value="70" />
-          </label>
-          <label class="field tight">
-            <span>Target</span>
-            <input id="ramp-target" type="number" min="50" max="180" value="110" />
-          </label>
-          <label class="field tight">
-            <span>Bars / step</span>
-            <input id="ramp-bars" type="number" min="1" max="16" value="2" />
-          </label>
-          <label class="field tight">
-            <span>+BPM</span>
-            <input id="ramp-step" type="number" min="1" max="20" value="5" />
-          </label>
-        </div>
-      </section>
-
-      <section class="panel" aria-label="Quick generate">
-        <h2 class="section-title">Quick generate</h2>
-        <p class="hint">Type something like <code>90 rock</code>, <code>slow ballad</code>, or <code>16th drill</code>.</p>
-        <div class="gen-row">
-          <input id="gen-input" type="text" placeholder="90 rock" autocomplete="off" />
-          <button id="gen-btn" type="button" class="secondary">Load</button>
-        </div>
-        <p id="gen-status" class="hint muted"></p>
-      </section>
-
-      <section class="beat" aria-live="polite">
-        <div id="beat-dots" class="dots" aria-hidden="true"></div>
-        <p id="status" class="status">Stopped</p>
+        <details class="ramp">
+          <summary>BPM ramp</summary>
+          <div class="ramp-body">
+            <label class="check">
+              <input id="ramp-enabled" type="checkbox" />
+              <span>Enable</span>
+            </label>
+            <div class="ramp-row">
+              <label class="field">
+                <span>Start</span>
+                <input id="ramp-start" type="number" min="50" max="160" value="70" />
+              </label>
+              <label class="field">
+                <span>Target</span>
+                <input id="ramp-target" type="number" min="50" max="180" value="120" />
+              </label>
+              <label class="field">
+                <span>Bars</span>
+                <input id="ramp-bars" type="number" min="1" max="16" value="2" />
+              </label>
+              <label class="field">
+                <span>+BPM</span>
+                <input id="ramp-step" type="number" min="1" max="20" value="5" />
+              </label>
+            </div>
+          </div>
+        </details>
       </section>
     </main>
     <script type="module" src="/main.js"></script>

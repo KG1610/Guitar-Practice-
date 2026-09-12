@@ -1,7 +1,8 @@
 {
   "id": "drill-wheel",
-  "name": "Drill · rhythm wheel",
-  "description": "Cycles common 16th subdivisions bar by bar (like the IG wheel). Use with BPM ramp.",
+  "name": "Rhythm wheel",
+  "subtitle": "Subdivision drill",
+  "description": "Cycles common 16th subdivisions bar by bar. Use with BPM ramp.",
   "bpmDefault": 70,
   "stepsPerBar": 16,
   "bars": 8,
