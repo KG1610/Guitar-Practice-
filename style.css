@@ -1,0 +1,145 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1115;
+  --panel: #171a21;
+  --text: #f3f5f7;
+  --muted: #9aa3ad;
+  --accent: #6ee7b7;
+  --accent-dim: #2a4a3c;
+  --border: #2a303a;
+  font-family: "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at top, #1a2230 0%, transparent 55%),
+    var(--bg);
+  color: var(--text);
+}
+
+.app {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.85rem;
+  letter-spacing: -0.03em;
+}
+
+.sub {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 2rem;
+  padding: 1.25rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.play {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.9rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 650;
+  background: var(--accent);
+  color: #062016;
+  cursor: pointer;
+}
+
+.play[aria-pressed="true"] {
+  background: #f87171;
+  color: #2a0b0b;
+}
+
+.bpm {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.bpm input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.bpm output {
+  min-width: 2ch;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.beat {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(23, 26, 33, 0.7);
+}
+
+.dots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.dots span {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  transition: background 0.08s linear, transform 0.08s linear;
+}
+
+.dots span.on {
+  background: var(--accent);
+  transform: scaleY(1.35);
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pattern-meta {
+  margin-top: 1.75rem;
+}
+
+.pattern-meta h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pattern-meta p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
