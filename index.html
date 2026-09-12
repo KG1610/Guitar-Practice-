@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Practice Desk — Guitar Drums</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <p class="eyebrow">Practice Desk</p>
+        <h1>Guitar drums</h1>
+        <p class="sub">Real kit groove for strumming practice. Not a click track.</p>
+      </header>
+
+      <section class="controls" aria-label="Transport">
+        <button id="play" type="button" class="play">Play</button>
+        <label class="bpm">
+          <span>BPM</span>
+          <input id="bpm" type="range" min="60" max="160" value="90" />
+          <output id="bpm-value" for="bpm">90</output>
+        </label>
+      </section>
+
+      <section class="beat" aria-live="polite">
+        <div id="beat-dots" class="dots" aria-hidden="true"></div>
+        <p id="status" class="status">Stopped</p>
+      </section>
+
+      <section class="pattern-meta">
+        <h2 id="pattern-name">rock-basic</h2>
+        <p id="pattern-desc">Kick on 1+3, snare on 2+4, hats on 8ths.</p>
+      </section>
+    </main>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
