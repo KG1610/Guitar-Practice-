@@ -1,0 +1,10 @@
+[
+  { "id": "rock-basic", "file": "rock-basic.json", "tags": ["groove", "rock"] },
+  { "id": "pop-four", "file": "pop-four.json", "tags": ["groove", "pop"] },
+  { "id": "ballad-soft", "file": "ballad-soft.json", "tags": ["groove", "ballad"] },
+  { "id": "shuffle-feel", "file": "shuffle-feel.json", "tags": ["groove", "shuffle"] },
+  { "id": "drill-quarters", "file": "drill-quarters.json", "tags": ["drill"] },
+  { "id": "drill-8ths", "file": "drill-8ths.json", "tags": ["drill"] },
+  { "id": "drill-16ths", "file": "drill-16ths.json", "tags": ["drill"] },
+  { "id": "drill-wheel", "file": "drill-wheel.json", "tags": ["drill", "wheel"] }
+]

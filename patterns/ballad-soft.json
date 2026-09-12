@@ -1,0 +1,13 @@
+{
+  "id": "ballad-soft",
+  "name": "Ballad soft",
+  "description": "Sparse kick, snare on 3, soft hats. Slow practice.",
+  "bpmDefault": 72,
+  "stepsPerBar": 8,
+  "bars": 1,
+  "tracks": {
+    "kick":  [1, 0, 0, 0, 0, 0, 0, 0],
+    "snare": [0, 0, 0, 0, 1, 0, 0, 0],
+    "hat":   [1, 0, 1, 0, 1, 0, 1, 0]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "drill-quarters",
+  "name": "Drill · quarters",
+  "description": "Kick on every beat. Subdivision wheel center — lock your strum to the pulse.",
+  "bpmDefault": 80,
+  "stepsPerBar": 8,
+  "bars": 1,
+  "mode": "drill",
+  "tracks": {
+    "kick":  [1, 0, 1, 0, 1, 0, 1, 0],
+    "snare": [0, 0, 0, 0, 0, 0, 0, 0],
+    "hat":   [0, 0, 0, 0, 0, 0, 0, 0]
+  }
+}

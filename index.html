@@ -11,10 +11,19 @@
       <header>
         <p class="eyebrow">Practice Desk</p>
         <h1>Guitar drums</h1>
-        <p class="sub">Real kit groove for strumming practice. Not a click track.</p>
+        <p class="sub">Library, drills, and BPM ramp. Real kit, not a click.</p>
       </header>
 
-      <section class="controls" aria-label="Transport">
+      <section class="panel" aria-label="Pattern library">
+        <label class="field">
+          <span>Pattern</span>
+          <select id="pattern-select"></select>
+        </label>
+        <p id="pattern-desc" class="hint"></p>
+        <p id="wheel-label" class="hint muted" hidden></p>
+      </section>
+
+      <section class="panel controls" aria-label="Transport">
         <button id="play" type="button" class="play">Play</button>
         <label class="bpm">
           <span>BPM</span>
@@ -23,14 +32,44 @@
         </label>
       </section>
 
+      <section class="panel" aria-label="BPM ramp">
+        <label class="check">
+          <input id="ramp-enabled" type="checkbox" />
+          <span>BPM ramp (drills)</span>
+        </label>
+        <div class="ramp-row">
+          <label class="field tight">
+            <span>Start</span>
+            <input id="ramp-start" type="number" min="50" max="160" value="70" />
+          </label>
+          <label class="field tight">
+            <span>Target</span>
+            <input id="ramp-target" type="number" min="50" max="180" value="110" />
+          </label>
+          <label class="field tight">
+            <span>Bars / step</span>
+            <input id="ramp-bars" type="number" min="1" max="16" value="2" />
+          </label>
+          <label class="field tight">
+            <span>+BPM</span>
+            <input id="ramp-step" type="number" min="1" max="20" value="5" />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Quick generate">
+        <h2 class="section-title">Quick generate</h2>
+        <p class="hint">Type something like <code>90 rock</code>, <code>slow ballad</code>, or <code>16th drill</code>.</p>
+        <div class="gen-row">
+          <input id="gen-input" type="text" placeholder="90 rock" autocomplete="off" />
+          <button id="gen-btn" type="button" class="secondary">Load</button>
+        </div>
+        <p id="gen-status" class="hint muted"></p>
+      </section>
+
       <section class="beat" aria-live="polite">
         <div id="beat-dots" class="dots" aria-hidden="true"></div>
         <p id="status" class="status">Stopped</p>
-      </section>
-
-      <section class="pattern-meta">
-        <h2 id="pattern-name">rock-basic</h2>
-        <p id="pattern-desc">Kick on 1+3, snare on 2+4, hats on 8ths.</p>
       </section>
     </main>
     <script type="module" src="/main.js"></script>
