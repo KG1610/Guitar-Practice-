@@ -1,0 +1,13 @@
+{
+  "id": "rock-basic",
+  "name": "Rock basic",
+  "description": "Kick on 1+3, snare on 2+4, hats on 8ths. Strumming-friendly 4/4.",
+  "bpmDefault": 90,
+  "stepsPerBar": 8,
+  "bars": 1,
+  "tracks": {
+    "kick":  [1, 0, 0, 0, 1, 0, 0, 0],
+    "snare": [0, 0, 1, 0, 0, 0, 1, 0],
+    "hat":   [1, 1, 1, 1, 1, 1, 1, 1]
+  }
+}
