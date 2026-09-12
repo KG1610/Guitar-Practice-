@@ -40,12 +40,17 @@
       <section class="stage" aria-label="Now playing">
         <p class="kicker" id="pattern-sub">AILD / metalcore</p>
         <h2 id="pattern-name">16th chug</h2>
+        <div class="form-meta" id="form-meta" hidden>
+          <span id="form-length" class="form-length">1-bar form</span>
+          <span id="form-bar-label" class="form-bar-label">Bar 1</span>
+        </div>
         <div class="bpm-hero">
           <output id="bpm-value" for="bpm">90</output>
           <span class="bpm-unit">BPM</span>
         </div>
         <p id="status" class="status" aria-live="polite">Ready · space to play</p>
         <div id="beat-pads" class="pads" aria-hidden="true"></div>
+        <div id="bar-playhead" class="bar-playhead" aria-label="Form playhead" hidden></div>
       </section>
 
       <section class="grid-panel" aria-label="16th grid">
@@ -82,6 +87,10 @@
             <select id="root-select"></select>
           </label>
         </div>
+        <div class="drill-row">
+          <span class="drill-label">Neck drills</span>
+          <div id="drill-chips" class="chips drill-chips" role="listbox" aria-label="Neck drills"></div>
+        </div>
         <div id="scale-patterns" class="chips" role="listbox" aria-label="Scale patterns"></div>
         <p id="scale-hint" class="hint"></p>
         <div id="fretboard" class="fretboard"></div>
@@ -91,6 +100,10 @@
         <label class="check">
           <input id="count-in" type="checkbox" checked />
           <span>Count-in</span>
+        </label>
+        <label class="check">
+          <input id="riff-lock" type="checkbox" />
+          <span>Riff lock</span>
         </label>
         <details class="ramp">
           <summary>BPM ramp</summary>
