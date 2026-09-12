@@ -1,0 +1,14 @@
+{
+  "id": "drill-16ths",
+  "name": "Drill · 16ths",
+  "description": "16th-note hats (16 steps). Tight strumming / muted rhythm practice.",
+  "bpmDefault": 70,
+  "stepsPerBar": 16,
+  "bars": 1,
+  "mode": "drill",
+  "tracks": {
+    "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+    "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+    "hat":   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  }
+}

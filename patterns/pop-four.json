@@ -1,0 +1,13 @@
+{
+  "id": "pop-four",
+  "name": "Pop four-on-floor",
+  "description": "Kick every quarter, snare on 2+4, light hats. Great for steady strumming.",
+  "bpmDefault": 100,
+  "stepsPerBar": 8,
+  "bars": 1,
+  "tracks": {
+    "kick":  [1, 0, 1, 0, 1, 0, 1, 0],
+    "snare": [0, 0, 1, 0, 0, 0, 1, 0],
+    "hat":   [1, 0, 1, 0, 1, 0, 1, 0]
+  }
+}

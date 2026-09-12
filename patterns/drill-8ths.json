@@ -1,0 +1,14 @@
+{
+  "id": "drill-8ths",
+  "name": "Drill · 8ths",
+  "description": "Hats on every 8th, kick on 1. Strum along with the hats.",
+  "bpmDefault": 80,
+  "stepsPerBar": 8,
+  "bars": 1,
+  "mode": "drill",
+  "tracks": {
+    "kick":  [1, 0, 0, 0, 0, 0, 0, 0],
+    "snare": [0, 0, 0, 0, 0, 0, 0, 0],
+    "hat":   [1, 1, 1, 1, 1, 1, 1, 1]
+  }
+}
