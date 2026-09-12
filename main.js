@@ -1,82 +1,96 @@
 import * as Tone from 'tone';
 import index from './patterns/index.json';
-import rockBasic from './patterns/rock-basic.json';
-import popFour from './patterns/pop-four.json';
-import balladSoft from './patterns/ballad-soft.json';
-import shuffleFeel from './patterns/shuffle-feel.json';
-import drillQuarters from './patterns/drill-quarters.json';
-import drill8ths from './patterns/drill-8ths.json';
-import drill16ths from './patterns/drill-16ths.json';
-import drillWheel from './patterns/drill-wheel.json';
 
-const catalog = {
-  'rock-basic': rockBasic,
-  'pop-four': popFour,
-  'ballad-soft': balladSoft,
-  'shuffle-feel': shuffleFeel,
-  'drill-quarters': drillQuarters,
-  'drill-8ths': drill8ths,
-  'drill-16ths': drill16ths,
-  'drill-wheel': drillWheel,
-};
+const modules = import.meta.glob('./patterns/*.json', { eager: true, import: 'default' });
+const catalog = {};
+for (const data of Object.values(modules)) {
+  if (data && !Array.isArray(data) && data.id) catalog[data.id] = data;
+}
 
 const playBtn = document.getElementById('play');
 const bpmInput = document.getElementById('bpm');
 const bpmValue = document.getElementById('bpm-value');
 const statusEl = document.getElementById('status');
-const patternSelect = document.getElementById('pattern-select');
-const patternDesc = document.getElementById('pattern-desc');
-const wheelLabel = document.getElementById('wheel-label');
-const beatDots = document.getElementById('beat-dots');
+const patternName = document.getElementById('pattern-name');
+const patternSub = document.getElementById('pattern-sub');
+const beatPads = document.getElementById('beat-pads');
+const syllablesEl = document.getElementById('syllables');
+const stepGrid = document.getElementById('step-grid');
+const trackRows = document.getElementById('track-rows');
+const stepSyllable = document.getElementById('step-syllable');
+const chipsEl = document.getElementById('pattern-chips');
+const volumeInput = document.getElementById('volume');
+const countInEl = document.getElementById('count-in');
 const rampEnabled = document.getElementById('ramp-enabled');
 const rampStart = document.getElementById('ramp-start');
 const rampTarget = document.getElementById('ramp-target');
 const rampBars = document.getElementById('ramp-bars');
 const rampStep = document.getElementById('ramp-step');
-const genInput = document.getElementById('gen-input');
-const genBtn = document.getElementById('gen-btn');
-const genStatus = document.getElementById('gen-status');
+const stageEl = document.querySelector('.stage');
+const mixBtns = [...document.querySelectorAll('.mix-btn')];
 
 let pattern = null;
 let playing = false;
+let countingIn = false;
 let step = 0;
 let barIndex = 0;
 let barsSinceRamp = 0;
 let loop = null;
+let mix = 'both';
+let currentId = index[0]?.id ?? 'chug-16th';
+
+const kitGain = new Tone.Gain(1).toDestination();
+const clickGain = new Tone.Gain(0.9).toDestination();
 
 const kick = new Tone.MembraneSynth({
-  pitchDecay: 0.03,
-  octaves: 5,
+  pitchDecay: 0.02,
+  octaves: 6,
   oscillator: { type: 'sine' },
-  envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.1 },
-}).toDestination();
+  envelope: { attack: 0.001, decay: 0.28, sustain: 0, release: 0.08 },
+}).connect(kitGain);
 
 const snareNoise = new Tone.NoiseSynth({
   noise: { type: 'white' },
-  envelope: { attack: 0.001, decay: 0.18, sustain: 0, release: 0.05 },
-}).toDestination();
-snareNoise.volume.value = -8;
+  envelope: { attack: 0.001, decay: 0.16, sustain: 0, release: 0.04 },
+}).connect(kitGain);
+snareNoise.volume.value = -10;
 
 const snareBody = new Tone.MembraneSynth({
-  pitchDecay: 0.01,
+  pitchDecay: 0.008,
   octaves: 2,
   oscillator: { type: 'triangle' },
-  envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.05 },
-}).toDestination();
-snareBody.volume.value = -6;
+  envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.04 },
+}).connect(kitGain);
+snareBody.volume.value = -7;
 
 const hat = new Tone.MetalSynth({
   frequency: 280,
-  envelope: { attack: 0.001, decay: 0.08, release: 0.02 },
+  envelope: { attack: 0.001, decay: 0.07, release: 0.02 },
   harmonicity: 5.1,
   modulationIndex: 32,
   resonance: 4000,
   octaves: 1.5,
-}).toDestination();
-hat.volume.value = -18;
+}).connect(kitGain);
+hat.volume.value = -20;
+
+const click = new Tone.MembraneSynth({
+  pitchDecay: 0.004,
+  octaves: 2,
+  oscillator: { type: 'sine' },
+  envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 },
+}).connect(clickGain);
+click.volume.value = -6;
+
+Tone.getDestination().volume.value = Number(volumeInput.value);
 
 function stepsPerBar() {
-  return pattern?.stepsPerBar ?? 8;
+  return pattern?.stepsPerBar ?? 16;
+}
+
+function syllablesFor(spb) {
+  if (spb === 16) return ['1', 'e', '&', 'a', '2', 'e', '&', 'a', '3', 'e', '&', 'a', '4', 'e', '&', 'a'];
+  if (spb === 8) return ['1', '&', '2', '&', '3', '&', '4', '&'];
+  return Array.from({ length: spb }, (_, i) => String(i + 1));
 }
 
 function currentTracks() {
@@ -86,6 +100,13 @@ function currentTracks() {
   return pattern.tracks;
 }
 
+function applyMix() {
+  const kitOn = mix !== 'click';
+  const clickOn = mix !== 'kit';
+  kitGain.gain.rampTo(kitOn ? 1 : 0, 0.04);
+  clickGain.gain.rampTo(clickOn ? 0.9 : 0, 0.04);
+}
+
 function setBpm(bpm) {
   const n = Math.max(50, Math.min(180, Number(bpm) || 90));
   Tone.getTransport().bpm.value = n;
@@ -93,62 +114,118 @@ function setBpm(bpm) {
   bpmValue.textContent = String(Math.round(n));
 }
 
-function rebuildDots() {
-  beatDots.innerHTML = '';
-  for (let i = 0; i < 4; i += 1) {
-    beatDots.appendChild(document.createElement('span'));
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function rebuildPads() {
+  beatPads.innerHTML = '';
+  for (let i = 0; i < 4; i += 1) beatPads.appendChild(document.createElement('span'));
+}
+
+function rebuildGrid() {
+  const spb = stepsPerBar();
+  const labels = syllablesFor(spb);
+  const cols = `repeat(${spb}, minmax(0, 1fr))`;
+  syllablesEl.style.gridTemplateColumns = cols;
+  stepGrid.style.gridTemplateColumns = cols;
+  syllablesEl.innerHTML = labels
+    .map((s, i) => (i % (spb / 4) === 0 ? `<b>${s}</b>` : `<span>${s}</span>`))
+    .join('');
+  stepGrid.innerHTML = '';
+  for (let i = 0; i < spb; i += 1) {
+    const cell = document.createElement('span');
+    cell.dataset.step = String(i);
+    stepGrid.appendChild(cell);
+  }
+  const tracks = currentTracks() ?? {};
+  const names = [
+    ['kick', 'Kick'],
+    ['snare', 'Snare'],
+    ['hat', 'Hat'],
+    ['click', 'Click'],
+  ];
+  trackRows.innerHTML = '';
+  for (const [key, label] of names) {
+    const row = document.createElement('div');
+    row.className = 'track';
+    row.innerHTML = `<label>${label}</label><div class="track-hits" style="grid-template-columns:${cols}"></div>`;
+    const hits = row.querySelector('.track-hits');
+    for (let i = 0; i < spb; i += 1) {
+      const dot = document.createElement('i');
+      const filled = key === 'click' ? true : Boolean(tracks[key]?.[i]);
+      if (filled) dot.classList.add('filled');
+      hits.appendChild(dot);
+    }
+    trackRows.appendChild(row);
   }
 }
 
-function highlightBeat(stepIndex) {
+function highlight(stepIndex) {
   const spb = stepsPerBar();
   const beat = Math.floor((stepIndex / spb) * 4) % 4;
-  [...beatDots.children].forEach((el, i) => {
+  [...beatPads.children].forEach((el, i) => {
     el.classList.toggle('on', i === beat);
+    el.classList.toggle('downbeat', i === beat && beat === 0);
+  });
+  const labels = syllablesFor(spb);
+  stepSyllable.textContent = stepIndex >= 0 ? (labels[stepIndex] ?? '') : labels[0];
+  [...stepGrid.children].forEach((el, i) => {
+    el.classList.toggle('on', i === stepIndex);
+    const tracks = currentTracks() ?? {};
+    const any = Boolean(tracks.kick?.[i] || tracks.snare?.[i] || tracks.hat?.[i]);
+    el.classList.toggle('hit', any);
+  });
+  trackRows.querySelectorAll('.track-hits').forEach((row) => {
+    [...row.children].forEach((el, i) => el.classList.toggle('on', i === stepIndex));
   });
 }
 
-function updateWheelLabel() {
+function updateWheelMeta() {
   if (pattern?.wheel && pattern.tracksByBar?.length) {
     const slice = pattern.tracksByBar[barIndex % pattern.tracksByBar.length];
-    wheelLabel.hidden = false;
-    wheelLabel.textContent = `Wheel bar: ${slice.label}`;
-  } else {
-    wheelLabel.hidden = true;
-    wheelLabel.textContent = '';
+    patternSub.textContent = `${pattern.subtitle ?? 'Subdivision drill'} · ${slice.label}`;
+    rebuildGrid();
+    highlight(step);
   }
+}
+
+function triggerClick(time, stepIndex, velocity) {
+  if (mix === 'kit') return;
+  const note = stepIndex === 0 ? 'C7' : 'G6';
+  click.triggerAttackRelease(note, '32n', time, velocity);
 }
 
 function triggerStep(time, stepIndex) {
   const tracks = currentTracks();
-  if (tracks.kick?.[stepIndex]) kick.triggerAttackRelease('C1', '8n', time);
-  if (tracks.snare?.[stepIndex]) {
-    snareNoise.triggerAttackRelease('8n', time);
-    snareBody.triggerAttackRelease('G2', '16n', time);
+  const spb = stepsPerBar();
+  const isBeat = stepIndex % (spb / 4) === 0;
+  const vel = stepIndex === 0 ? 1 : isBeat ? 0.55 : 0.22;
+
+  if (mix !== 'kit') triggerClick(time, stepIndex, vel);
+  if (mix !== 'click') {
+    if (tracks.kick?.[stepIndex]) kick.triggerAttackRelease('C1', '16n', time);
+    if (tracks.snare?.[stepIndex]) {
+      snareNoise.triggerAttackRelease('16n', time);
+      snareBody.triggerAttackRelease('G2', '32n', time);
+    }
+    if (tracks.hat?.[stepIndex]) hat.triggerAttackRelease('32n', time, undefined, 0.32);
   }
-  if (tracks.hat?.[stepIndex]) {
-    hat.triggerAttackRelease('32n', time, undefined, 0.35);
-  }
-  Tone.getDraw().schedule(() => {
-    highlightBeat(stepIndex);
-    updateWheelLabel();
-  }, time);
+
+  Tone.getDraw().schedule(() => highlight(stepIndex), time);
 }
 
 function maybeRamp() {
   if (!rampEnabled.checked || !playing) return;
   const every = Math.max(1, Number(rampBars.value) || 2);
   const delta = Math.max(1, Number(rampStep.value) || 5);
-  const target = Number(rampTarget.value) || 110;
+  const target = Number(rampTarget.value) || 120;
   barsSinceRamp += 1;
   if (barsSinceRamp < every) return;
   barsSinceRamp = 0;
   const next = Math.min(target, Tone.getTransport().bpm.value + delta);
   setBpm(next);
-  statusEl.textContent =
-    next >= target
-      ? `Playing · ramp hit ${Math.round(target)} BPM`
-      : `Playing · ${Math.round(next)} BPM`;
+  setStatus(next >= target ? `Playing · ramp hit ${Math.round(target)}` : `Playing · ${Math.round(next)} BPM`);
 }
 
 function ensureLoop() {
@@ -163,117 +240,157 @@ function ensureLoop() {
     if (step >= stepsPerBar()) {
       step = 0;
       barIndex += 1;
+      if (pattern?.wheel) {
+        Tone.getDraw().schedule(() => updateWheelMeta(), time);
+      }
       maybeRamp();
     }
   }, subdivision);
+}
+
+function renderChips() {
+  chipsEl.innerHTML = '';
+  for (const item of index) {
+    const data = catalog[item.id];
+    if (!data) continue;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip';
+    btn.dataset.id = item.id;
+    btn.setAttribute('role', 'option');
+    btn.innerHTML = `${data.name}<small>${data.subtitle ?? ''}</small>`;
+    btn.addEventListener('click', async () => {
+      const wasPlaying = playing;
+      if (wasPlaying) stop();
+      loadPatternById(item.id);
+      if (wasPlaying) await start({ skipCountIn: true });
+    });
+    chipsEl.appendChild(btn);
+  }
+}
+
+function syncChipSelection() {
+  chipsEl.querySelectorAll('.chip').forEach((el) => {
+    el.setAttribute('aria-selected', el.dataset.id === currentId ? 'true' : 'false');
+  });
 }
 
 function loadPatternById(id) {
   const next = catalog[id];
   if (!next) throw new Error(`Unknown pattern: ${id}`);
   pattern = next;
-  patternSelect.value = id;
-  patternDesc.textContent = pattern.description || '';
+  currentId = id;
+  patternName.textContent = pattern.name;
+  patternSub.textContent = pattern.subtitle || pattern.description || '';
   setBpm(pattern.bpmDefault ?? 90);
+  Tone.getTransport().swing = Number(pattern.swing ?? 0);
   barIndex = 0;
   step = 0;
   barsSinceRamp = 0;
-  rebuildDots();
-  updateWheelLabel();
-  if (playing) {
-    ensureLoop();
-    loop.start(0);
-  }
+  rebuildPads();
+  rebuildGrid();
+  highlight(0);
+  syncChipSelection();
 }
 
-function fillSelect() {
-  patternSelect.innerHTML = '';
-  for (const item of index) {
-    const opt = document.createElement('option');
-    opt.value = item.id;
-    const data = catalog[item.id];
-    opt.textContent = data?.name || item.id;
-    patternSelect.appendChild(opt);
-  }
+async function countIn() {
+  countingIn = true;
+  setStatus('Count-in');
+  const beats = 4;
+  await new Promise((resolve) => {
+    let i = 0;
+    const counter = new Tone.Loop((time) => {
+      triggerClick(time, i === 0 ? 0 : 1, i === 0 ? 1 : 0.55);
+      const beat = i;
+      Tone.getDraw().schedule(() => {
+        highlight(Math.floor((beat / 4) * stepsPerBar()));
+        setStatus(`Count-in ${beat + 1}`);
+      }, time);
+      i += 1;
+      if (i >= beats) {
+        counter.stop(time);
+        Tone.getDraw().schedule(() => {
+          counter.dispose();
+          resolve();
+        }, time);
+      }
+    }, '4n');
+    counter.start(0);
+    Tone.getTransport().start();
+  });
+  countingIn = false;
 }
 
-function parseGenerate(text) {
-  const q = text.trim().toLowerCase();
-  if (!q) return null;
-  const bpmMatch = q.match(/(\d{2,3})\s*bpm|\b(\d{2,3})\b/);
-  const bpm = bpmMatch ? Number(bpmMatch[1] || bpmMatch[2]) : null;
-
-  let id = 'rock-basic';
-  if (/ballad|slow|soft/.test(q)) id = 'ballad-soft';
-  else if (/pop|four|4.?floor/.test(q)) id = 'pop-four';
-  else if (/shuffle|swing/.test(q)) id = 'shuffle-feel';
-  else if (/wheel/.test(q)) id = 'drill-wheel';
-  else if (/16|sixteenth/.test(q)) id = 'drill-16ths';
-  else if (/8th|eighth/.test(q)) id = 'drill-8ths';
-  else if (/quarter|pulse|click/.test(q)) id = 'drill-quarters';
-  else if (/drill/.test(q)) id = 'drill-8ths';
-  else if (/rock|strum/.test(q)) id = 'rock-basic';
-
-  return { id, bpm };
-}
-
-async function start() {
-  if (!pattern) loadPatternById(patternSelect.value || index[0].id);
+async function start({ skipCountIn = false } = {}) {
+  if (!pattern) loadPatternById(currentId);
   await Tone.start();
+  applyMix();
   if (rampEnabled.checked) setBpm(Number(rampStart.value) || pattern.bpmDefault || 90);
   else setBpm(Number(bpmInput.value));
   step = 0;
   barIndex = 0;
   barsSinceRamp = 0;
-  Tone.getTransport().position = 0;
-  ensureLoop();
-  loop.start(0);
-  Tone.getTransport().start();
   playing = true;
   playBtn.textContent = 'Stop';
   playBtn.setAttribute('aria-pressed', 'true');
-  statusEl.textContent = 'Playing';
-  updateWheelLabel();
+  stageEl.classList.add('is-playing');
+
+  Tone.getTransport().stop();
+  Tone.getTransport().position = 0;
+  if (countInEl.checked && !skipCountIn) {
+    await countIn();
+    if (!playing) return;
+    Tone.getTransport().stop();
+    Tone.getTransport().position = 0;
+  }
+
+  ensureLoop();
+  loop.start(0);
+  Tone.getTransport().start();
+  setStatus('Playing · space to stop');
 }
 
 function stop() {
   Tone.getTransport().stop();
+  Tone.getTransport().cancel();
   if (loop) loop.stop();
   playing = false;
+  countingIn = false;
   playBtn.textContent = 'Play';
   playBtn.setAttribute('aria-pressed', 'false');
-  statusEl.textContent = 'Stopped';
-  [...beatDots.children].forEach((el) => el.classList.remove('on'));
+  stageEl.classList.remove('is-playing');
+  setStatus('Ready · space to play');
+  highlight(-1);
+  [...beatPads.children].forEach((el) => el.classList.remove('on', 'downbeat'));
 }
 
 playBtn.addEventListener('click', async () => {
-  if (playing) stop();
+  if (playing || countingIn) stop();
   else await start();
 });
 
 bpmInput.addEventListener('input', () => setBpm(Number(bpmInput.value)));
-
-patternSelect.addEventListener('change', async () => {
-  const wasPlaying = playing;
-  if (wasPlaying) stop();
-  loadPatternById(patternSelect.value);
-  if (wasPlaying) await start();
+volumeInput.addEventListener('input', () => {
+  Tone.getDestination().volume.value = Number(volumeInput.value);
 });
 
-genBtn.addEventListener('click', () => {
-  const parsed = parseGenerate(genInput.value);
-  if (!parsed) {
-    genStatus.textContent = 'Try: 90 rock · slow ballad · 16th drill · wheel';
-    return;
-  }
-  loadPatternById(parsed.id);
-  if (parsed.bpm) setBpm(parsed.bpm);
-  genStatus.textContent = `Loaded ${pattern.name}${parsed.bpm ? ` @ ${parsed.bpm} BPM` : ''}`;
+mixBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    mix = btn.dataset.mix;
+    mixBtns.forEach((b) => b.setAttribute('aria-checked', b === btn ? 'true' : 'false'));
+    applyMix();
+  });
 });
 
-genInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') genBtn.click();
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+  e.preventDefault();
+  playBtn.click();
 });
 
-fillSelect();
+renderChips();
 loadPatternById(index[0].id);
+applyMix();
+setStatus('Ready · space to play');

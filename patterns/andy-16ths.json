@@ -1,0 +1,13 @@
+{
+  "id": "andy-16ths",
+  "name": "Accented 16ths",
+  "subtitle": "Andy James / shred",
+  "description": "Every 16th hat, kick 1+3, snare 2+4. Alternate-picking lock-in.",
+  "bpmDefault": 100,
+  "stepsPerBar": 16,
+  "tracks": {
+    "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+    "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+    "hat":   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  }
+}

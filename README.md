@@ -1,40 +1,34 @@
-# Practice Desk — Guitar drums
+# Practice Desk — Metal guitar
 
-Mac-friendly drum player for guitar practice. Real kit sounds via Tone.js (not a click). Patterns live as JSON in git.
+Laptop-side drum/click desk for metal practice. Kit + click, 16th grid, count-in. Patterns live as JSON in git.
 
-## Run on Mac
+## Run
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the Vite URL (usually `http://localhost:5173`). Headphones recommended.
+Open `http://localhost:5173`. Headphones recommended. **Space** starts/stops.
 
-## What’s included
+## Default take
 
-- **Library** — rock, pop, ballad, shuffle + subdivision drills
-- **Rhythm wheel drill** — cycles common 16th subdivisions bar by bar
-- **BPM ramp** — start → target, +BPM every N bars (great for drills)
-- **Quick generate** — type `90 rock`, `slow ballad`, `16th drill`, `wheel`
-- Play / Stop, live BPM, beat indicator
+AILD-style 16th chug, kit + click, grid visible. Hit Play.
 
-## Add a pattern
+## Feels
 
-1. Add `patterns/your-groove.json` (see `rock-basic.json`).
-2. Register it in `patterns/index.json`.
-3. Reload the app.
+| Groove | Subtitle |
+|---|---|
+| 16th chug | AILD / metalcore |
+| Breakdown | AILD / metalcore |
+| Gallop | Metal / 1-e-a |
+| Accented 16ths | Andy James / shred |
+| Straight 8ths | Satriani / rock-metal |
+| Double-kick | Metalcore / death-adjacent |
+| Rhythm wheel | Subdivision drill |
 
-For multi-bar wheel drills, set `"wheel": true` and provide `tracksByBar` (see `drill-wheel.json`).
+Mix: **Click / Kit / Both**. Optional 1-bar count-in and BPM ramp.
 
 ## Stack
 
-Vite + Tone.js synth kit (Membrane / Noise / Metal). No sample license baggage.
-
-## Chat → new patterns
-
-Ask Idea Man (or open a PR) to add JSON grooves to `patterns/` — they’ll show up in the library after merge.
-
-## License
-
-MIT for this code. Tone.js under its own license.
+Vite + Tone.js synth kit. No sample licenses.

@@ -1,0 +1,13 @@
+{
+  "id": "chug-16th",
+  "name": "16th chug",
+  "subtitle": "AILD / metalcore",
+  "description": "Palm-mute 16ths. Kick 1 + & of 2, snare 2+4, hats on every 16th.",
+  "bpmDefault": 90,
+  "stepsPerBar": 16,
+  "tracks": {
+    "kick":  [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+    "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+    "hat":   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  }
+}
