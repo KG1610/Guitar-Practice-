@@ -1,6 +1,6 @@
 # Practice Desk — Guitar drums
 
-A tiny Mac-friendly drum player for guitar practice. Real kit sounds (synth drums via Tone.js), not a click track. Patterns live as JSON in git so nothing gets lost.
+Mac-friendly drum player for guitar practice. Real kit sounds via Tone.js (not a click). Patterns live as JSON in git.
 
 ## Run on Mac
 
@@ -9,33 +9,32 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`). Click **Play**. Headphones recommended.
+Open the Vite URL (usually `http://localhost:5173`). Headphones recommended.
 
-## What's in v1
+## What’s included
 
-- One rock/strumming groove: kick on 1+3, snare on 2+4, hats on 8ths
-- Play / Stop
-- BPM 60–160 (default 90)
-- Beat indicator
-- Pattern file: [`patterns/rock-basic.json`](patterns/rock-basic.json)
+- **Library** — rock, pop, ballad, shuffle + subdivision drills
+- **Rhythm wheel drill** — cycles common 16th subdivisions bar by bar
+- **BPM ramp** — start → target, +BPM every N bars (great for drills)
+- **Quick generate** — type `90 rock`, `slow ballad`, `16th drill`, `wheel`
+- Play / Stop, live BPM, beat indicator
 
 ## Add a pattern
 
-1. Copy `patterns/rock-basic.json` to a new file under `patterns/`.
-2. Edit `tracks.kick`, `tracks.snare`, and `tracks.hat` — arrays of `1`/`0` for each 8th-note step in the bar (`stepsPerBar`, usually 8).
-3. Point `main.js` at the new JSON import (library UI comes later).
+1. Add `patterns/your-groove.json` (see `rock-basic.json`).
+2. Register it in `patterns/index.json`.
+3. Reload the app.
+
+For multi-bar wheel drills, set `"wheel": true` and provide `tracksByBar` (see `drill-wheel.json`).
 
 ## Stack
 
-- [Vite](https://vitejs.dev/)
-- [Tone.js](https://tonejs.github.io/) (MembraneSynth / NoiseSynth / MetalSynth kit — no sample license baggage)
+Vite + Tone.js synth kit (Membrane / Noise / Metal). No sample license baggage.
 
-## Roadmap (not in this pass)
+## Chat → new patterns
 
-- Chat → generate pattern → commit
-- Pattern library UI
-- BPM-ramping subdivision drills (rhythm wheel)
+Ask Idea Man (or open a PR) to add JSON grooves to `patterns/` — they’ll show up in the library after merge.
 
 ## License
 
-MIT for this code. Tone.js is under its own license.
+MIT for this code. Tone.js under its own license.
