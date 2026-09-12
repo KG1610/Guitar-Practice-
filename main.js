@@ -1,5 +1,6 @@
 import * as Tone from 'tone';
 import index from './patterns/index.json';
+import { mountFretboard } from './fretboard.js';
 
 const modules = import.meta.glob('./patterns/*.json', { eager: true, import: 'default' });
 const catalog = {};
@@ -393,4 +394,5 @@ window.addEventListener('keydown', (e) => {
 renderChips();
 loadPatternById(index[0].id);
 applyMix();
+mountFretboard();
 setStatus('Ready · space to play');

@@ -29,6 +29,12 @@ AILD-style 16th chug, kit + click, grid visible. Hit Play.
 
 Mix: **Click / Kit / Both**. Optional 1-bar count-in and BPM ramp.
 
+## Fretboard
+
+Default **A harmonic minor**. Switch natural / harmonic / melodic minor, pentatonic, Phrygian, Dorian, major. Ember = root, gold = color tone (the 7 in harmonic minor).
+
+Suggested patterns: all notes, five boxes, 3 notes per string. Notes outside the selected pattern stay dim so you still see the whole neck.
+
 ## Stack
 
 Vite + Tone.js synth kit. No sample licenses.

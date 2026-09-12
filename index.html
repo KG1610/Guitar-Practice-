@@ -67,6 +67,26 @@
         <div id="pattern-chips" class="chips" role="listbox" aria-label="Patterns"></div>
       </section>
 
+      <section class="neck-panel" aria-label="Scale viewer">
+        <div class="grid-head">
+          <span class="grid-title">Fretboard</span>
+          <span id="scale-formula" class="scale-formula">A harmonic minor</span>
+        </div>
+        <div class="neck-controls">
+          <label class="field">
+            <span>Scale</span>
+            <select id="scale-select"></select>
+          </label>
+          <label class="field">
+            <span>Root</span>
+            <select id="root-select"></select>
+          </label>
+        </div>
+        <div id="scale-patterns" class="chips" role="listbox" aria-label="Scale patterns"></div>
+        <p id="scale-hint" class="hint"></p>
+        <div id="fretboard" class="fretboard"></div>
+      </section>
+
       <section class="extras">
         <label class="check">
           <input id="count-in" type="checkbox" checked />
