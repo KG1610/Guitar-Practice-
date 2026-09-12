@@ -1,0 +1,34 @@
+{
+  "id": "verse-chug-4",
+  "name": "Verse chug · 4-bar",
+  "subtitle": "Palm-mute groove with bar-4 twist",
+  "description": "Four bars of tight palm-mute chug. Bars 1–3 lock the pocket; bar 4 adds a small kick/snare variation before the loop.",
+  "bpmDefault": 92,
+  "stepsPerBar": 16,
+  "form": [
+    {
+      "label": "Chug 1",
+      "kick":  [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
+      "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+      "hat":   [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1]
+    },
+    {
+      "label": "Chug 2",
+      "kick":  [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
+      "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+      "hat":   [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1]
+    },
+    {
+      "label": "Chug 3",
+      "kick":  [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
+      "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+      "hat":   [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1]
+    },
+    {
+      "label": "Twist",
+      "kick":  [1,0,0,0, 0,0,1,0, 1,0,1,0, 0,1,0,0],
+      "snare": [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0],
+      "hat":   [1,1,1,1, 1,1,1,1, 1,1,1,0, 1,1,1,1]
+    }
+  ]
+}

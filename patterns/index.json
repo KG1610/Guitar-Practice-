@@ -1,4 +1,6 @@
 [
+  { "id": "chorus-lift-8", "file": "chorus-lift-8.json" },
+  { "id": "verse-chug-4", "file": "verse-chug-4.json" },
   { "id": "chug-16th", "file": "chug-16th.json" },
   { "id": "breakdown-halftime", "file": "breakdown-halftime.json" },
   { "id": "gallop", "file": "gallop.json" },
