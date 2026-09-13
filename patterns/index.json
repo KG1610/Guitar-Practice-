@@ -1,6 +1,12 @@
 [
   { "id": "chorus-lift-8", "file": "chorus-lift-8.json" },
   { "id": "verse-chug-4", "file": "verse-chug-4.json" },
+  { "id": "clear-16ths-8", "file": "clear-16ths-8.json" },
+  { "id": "clear-8ths-8", "file": "clear-8ths-8.json" },
+  { "id": "pocket-quarters-8", "file": "pocket-quarters-8.json" },
+  { "id": "provoke-jam-8", "file": "provoke-jam-8.json" },
+  { "id": "four-and-change-8", "file": "four-and-change-8.json" },
+  { "id": "metal-drive-8", "file": "metal-drive-8.json" },
   { "id": "chug-16th", "file": "chug-16th.json" },
   { "id": "breakdown-halftime", "file": "breakdown-halftime.json" },
   { "id": "gallop", "file": "gallop.json" },
