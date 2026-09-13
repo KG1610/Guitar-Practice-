@@ -15,6 +15,7 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0b0c'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ff4e2a'/%3E%3C/svg%3E"
     />
     <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/glory.css" />
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -40,12 +41,17 @@
       <section class="stage" aria-label="Now playing">
         <p class="kicker" id="pattern-sub">AILD / metalcore</p>
         <h2 id="pattern-name">16th chug</h2>
+        <div class="form-meta" id="form-meta" hidden>
+          <span id="form-length" class="form-length">1-bar form</span>
+          <span id="form-bar-label" class="form-bar-label">Bar 1</span>
+        </div>
         <div class="bpm-hero">
           <output id="bpm-value" for="bpm">90</output>
           <span class="bpm-unit">BPM</span>
         </div>
         <p id="status" class="status" aria-live="polite">Ready · space to play</p>
         <div id="beat-pads" class="pads" aria-hidden="true"></div>
+        <div id="bar-playhead" class="bar-playhead" aria-label="Form playhead" hidden></div>
       </section>
 
       <section class="grid-panel" aria-label="16th grid">
@@ -82,6 +88,10 @@
             <select id="root-select"></select>
           </label>
         </div>
+        <div class="drill-row">
+          <span class="drill-label">Neck drills</span>
+          <div id="drill-chips" class="chips drill-chips" role="listbox" aria-label="Neck drills"></div>
+        </div>
         <div id="scale-patterns" class="chips" role="listbox" aria-label="Scale patterns"></div>
         <p id="scale-hint" class="hint"></p>
         <div id="fretboard" class="fretboard"></div>
@@ -91,6 +101,10 @@
         <label class="check">
           <input id="count-in" type="checkbox" checked />
           <span>Count-in</span>
+        </label>
+        <label class="check">
+          <input id="riff-lock" type="checkbox" />
+          <span>Riff lock</span>
         </label>
         <details class="ramp">
           <summary>BPM ramp</summary>
