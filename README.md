@@ -19,6 +19,21 @@ Open `http://localhost:5173`. Headphones recommended. **Space** starts/stops.
 - **Riff lock** — optional dark muted pulse under kick hits (Tone.js DuoSynth) so you can lock a chug feel without a full guitar sim.
 - **Neck drills** — Off | Roots on 1 | Color on snare | Ascend with click.
 - **Rhythm geometry** — polar view of the current bar: 4-beat diamond, kick polygon, snare, hats, moving playhead. 12-step grooves use eighth-note triplets (`8t`).
+- **Form composer** — click-add / drag-drop bars into a 4–8 slot strip, play the assembled form, save named customs under **My forms** (`practice-desk-customs-v1`).
+
+
+## Composer
+
+Assemble a 4- or 8-bar form from existing bars, then play or save it.
+
+1. Open the **Composer** panel (under the stage playhead).
+2. Toggle **4 bars** / **8 bars**.
+3. **Add current bar** copies the loaded pattern’s current bar into the next empty slot — or drag a pattern chip onto a slot.
+4. Reorder by dragging filled slots; clear a slot with **×**.
+5. **Play form** loads a synthetic multi-bar pattern into the player.
+6. **Save as…** stores a named form in `localStorage` key `practice-desk-customs-v1`. Saved forms appear under **My forms** in the chip list (load / play / delete).
+
+Out of scope for v1: per-hit grid editing inside a custom bar.
 
 ## Copyright / inspiration
 

@@ -1,0 +1,207 @@
+.composer-panel {
+  margin-top: 1rem;
+  padding: 1.15rem 1.2rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(12, 12, 14, 0.72);
+}
+
+.composer-panel .grid-head {
+  align-items: center;
+}
+
+.composer-length {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.composer-len-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.composer-len-btn[aria-pressed="true"] {
+  background: var(--ember);
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.composer-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+  min-height: 4.2rem;
+  padding: 0.35rem;
+  border-radius: 14px;
+  border: 1px dashed transparent;
+}
+
+.composer-slots[data-cols="8"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .composer-slots[data-cols="8"],
+  .composer-panel:has([data-len="8"][aria-pressed="true"]) .composer-slots {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+.composer-slot {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+  align-content: center;
+  min-height: 3.6rem;
+  padding: 0.45rem 0.5rem 0.55rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.composer-slot.filled {
+  border-style: solid;
+  border-color: var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  cursor: grab;
+}
+
+.composer-slot.dragging {
+  opacity: 0.55;
+}
+
+.composer-slot.drag-over {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ember) 35%, transparent);
+}
+
+.composer-slot-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.composer-slot-label {
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-slot-clear {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.25rem;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.composer-slot-clear:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--ember) 25%, transparent);
+}
+
+.composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.composer-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.composer-btn:hover {
+  filter: brightness(1.06);
+}
+
+.composer-btn.primary {
+  background: var(--ember);
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.composer-btn.ghost {
+  background: transparent;
+}
+
+.composer-hint {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 550;
+  min-height: 1.1em;
+}
+
+.chip-section {
+  flex: 1 0 100%;
+  margin: 0.35rem 0 0.15rem;
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.chip.custom {
+  border-style: dashed;
+}
+
+.chip .chip-del {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.65;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  margin-left: 0.35rem;
+  padding: 0 0.15rem;
+  cursor: pointer;
+}
+
+.chip .chip-del:hover {
+  opacity: 1;
+}
+
+.chip[draggable="true"] {
+  cursor: grab;
+}
