@@ -96,7 +96,8 @@ function ensureLoop() {
     if (state.step >= (state.pattern?.stepsPerBar ?? 16)) {
       state.step = 0;
       state.barIndex += 1;
-      Tone.getDraw().schedule(() => engine.refreshFormUi(), time);
+      // Form UI refreshes on the new bar's first step (inside triggerStep),
+      // not here — otherwise draw callbacks read the new barIndex one 16th early.
       maybeRamp();
     }
   }, subdivision);
@@ -320,8 +321,6 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   playBtn.click();
 });
-
-window.addEventListener('practice-desk-fretboard-change', () => persistSession());
 
 const saved = readSession();
 renderChips();
