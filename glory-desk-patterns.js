@@ -1,5 +1,6 @@
 import index from './patterns/index.json';
 import { readCustoms, deleteCustom } from './glory-composer.js';
+import { readFavs, isFav, toggleFav, removeFav } from './glory-favs.js';
 import { state } from './glory-state.js';
 
 export function attachPatterns(api) {
@@ -53,10 +54,19 @@ export function attachPatterns(api) {
     loadPattern(next, { applyDefaultBpm });
   }
 
+  function sectionHeading(text) {
+    const heading = document.createElement('div');
+    heading.className = 'chip-section';
+    heading.textContent = text;
+    return heading;
+  }
+
   function makeChip(data, { custom = false } = {}) {
+    const faved = isFav(data.id);
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = custom ? 'chip custom' : 'chip';
+    if (faved) btn.classList.add('faved');
     btn.dataset.id = data.id;
     btn.setAttribute('role', 'option');
     btn.draggable = true;
@@ -80,46 +90,71 @@ export function attachPatterns(api) {
       loadPatternById(data.id);
       if (wasPlaying) await start({ skipCountIn: true });
     });
-    if (!custom) return btn;
+
     const wrap = document.createElement('div');
     wrap.className = 'chip-wrap';
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'chip-del';
-    del.title = 'Delete custom form';
-    del.setAttribute('aria-label', `Delete ${data.name}`);
-    del.textContent = 'x';
-    del.addEventListener('click', async (e) => {
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.className = `chip-fav${faved ? ' on' : ''}`;
+    star.title = faved ? 'Remove from favourites' : 'Add to favourites';
+    star.setAttribute('aria-pressed', faved ? 'true' : 'false');
+    star.setAttribute('aria-label', faved ? `Unfavourite ${data.name}` : `Favourite ${data.name}`);
+    star.textContent = faved ? '★' : '☆';
+    star.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!window.confirm(`Delete "${data.name}"?`)) return;
-      if (deleteCustom(data.id) == null) return;
-      if (state.currentId === data.id) {
-        const wasPlaying = state.playing || state.countingIn;
-        if (wasPlaying) stop();
-        const fallback = index[0]?.id;
-        if (fallback) loadPatternById(fallback);
-        if (wasPlaying) await start({ skipCountIn: true });
-      }
+      toggleFav(data.id);
+      star.blur();
       renderChips();
     });
-    wrap.append(btn, del);
+    wrap.append(star, btn);
+
+    if (custom) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'chip-del';
+      del.title = 'Delete custom form';
+      del.setAttribute('aria-label', `Delete ${data.name}`);
+      del.textContent = 'x';
+      del.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!window.confirm(`Delete "${data.name}"?`)) return;
+        if (deleteCustom(data.id) == null) return;
+        removeFav(data.id);
+        if (state.currentId === data.id) {
+          const wasPlaying = state.playing || state.countingIn;
+          if (wasPlaying) stop();
+          const fallback = index[0]?.id;
+          if (fallback) loadPatternById(fallback);
+          if (wasPlaying) await start({ skipCountIn: true });
+        }
+        renderChips();
+      });
+      wrap.appendChild(del);
+    }
     return wrap;
   }
 
   function renderChips() {
     chipsEl.innerHTML = '';
     const customs = readCustoms();
+    const favIds = readFavs();
+    const byId = new Map();
+    for (const item of index) {
+      const data = catalog[item.id];
+      if (data) byId.set(data.id, { data, custom: false });
+    }
+    for (const data of customs) byId.set(data.id, { data, custom: true });
+
+    const favs = favIds.map((id) => byId.get(id)).filter(Boolean);
+    if (favs.length) {
+      chipsEl.appendChild(sectionHeading('Favourites'));
+      for (const { data, custom } of favs) chipsEl.appendChild(makeChip(data, { custom }));
+    }
     if (customs.length) {
-      const heading = document.createElement('div');
-      heading.className = 'chip-section';
-      heading.textContent = 'My forms';
-      chipsEl.appendChild(heading);
+      chipsEl.appendChild(sectionHeading('My forms'));
       for (const data of customs) chipsEl.appendChild(makeChip(data, { custom: true }));
     }
-    const presetsHeading = document.createElement('div');
-    presetsHeading.className = 'chip-section';
-    presetsHeading.textContent = 'Presets';
-    chipsEl.appendChild(presetsHeading);
+    chipsEl.appendChild(sectionHeading('Presets'));
     for (const item of index) {
       const data = catalog[item.id];
       if (!data) continue;
