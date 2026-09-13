@@ -81,7 +81,7 @@
 }
 
 .geo-panel {
-  margin-top: 1rem;
+  margin-top: 0;
   padding: 1.15rem 1.2rem 1.25rem;
   border: 1px solid var(--line);
   border-radius: 22px;

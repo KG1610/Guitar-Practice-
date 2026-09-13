@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Practice Desk — Metal guitar</title>
+    <title>Practice Desk - Metal guitar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,6 +16,7 @@
     />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/glory.css" />
+    <link rel="stylesheet" href="/composer.css" />
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -38,6 +39,7 @@
         </div>
       </header>
 
+      <div class="workspace">
       <section class="stage" aria-label="Now playing">
         <p class="kicker" id="pattern-sub">AILD / metalcore</p>
         <h2 id="pattern-name">16th chug</h2>
@@ -53,15 +55,34 @@
           <span>Tempo</span>
           <input id="bpm" type="range" min="50" max="180" value="90" />
         </label>
-        <p id="status" class="status" aria-live="polite">Ready · space to play</p>
+        <p id="status" class="status" aria-live="polite">Ready - space to play</p>
         <div id="beat-pads" class="pads" aria-hidden="true"></div>
         <div id="bar-playhead" class="bar-playhead" aria-label="Form playhead" hidden></div>
+      </section>
+
+
+      <section class="composer-panel" id="composer" aria-label="Form composer">
+        <div class="grid-head">
+          <span class="grid-title">Composer</span>
+          <div class="composer-length" data-composer-length role="group" aria-label="Form length">
+            <button type="button" class="composer-len-btn" data-len="4" aria-pressed="true">4 bars</button>
+            <button type="button" class="composer-len-btn" data-len="8" aria-pressed="false">8 bars</button>
+          </div>
+        </div>
+        <div class="composer-slots" data-composer-slots role="list" aria-label="Form slots"></div>
+        <div class="composer-actions">
+          <button type="button" class="composer-btn" data-composer-add>Add current bar</button>
+          <button type="button" class="composer-btn ghost" data-composer-clear>Clear</button>
+          <button type="button" class="composer-btn primary" data-composer-play>Play form</button>
+          <button type="button" class="composer-btn" data-composer-save>Save as...</button>
+        </div>
+        <p class="composer-hint" data-composer-status>Drag chips onto slots - or Add current bar</p>
       </section>
 
       <section class="geo-panel" aria-label="Rhythm geometry">
         <div class="grid-head">
           <span class="grid-title">Geometry</span>
-          <span class="geo-legend">Kick polygon · snare · hats</span>
+          <span class="geo-legend">Kick polygon - snare - hats</span>
         </div>
         <div id="geometry" class="geometry"></div>
       </section>
@@ -75,6 +96,7 @@
         <div id="step-grid" class="step-grid"></div>
         <div id="track-rows" class="tracks"></div>
       </section>
+      </div>
 
       <section class="transport" aria-label="Transport">
         <button id="play" type="button" class="play">Play</button>

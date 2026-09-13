@@ -8,6 +8,7 @@ export const state = {
   loop: null,
   mix: 'both',
   currentId: null,
+  lastRealPatternId: null,
   riffLock: false,
   fretboardApi: null,
   suppressPersist: false,

@@ -51,6 +51,14 @@ body {
   padding: 1.75rem 0 3.5rem;
 }
 
+.workspace {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.workspace > * { margin-top: 0; }
+
 .top {
   display: flex;
   align-items: flex-end;
@@ -214,7 +222,7 @@ h1 {
 }
 
 .grid-panel {
-  margin-top: 1rem;
+  margin-top: 0;
   padding: 1.15rem 1.2rem 1.25rem;
   border: 1px solid var(--line);
   border-radius: 22px;
@@ -657,6 +665,39 @@ input:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--ember-2);
   outline-offset: 3px;
+}
+
+@media (min-width: 960px) {
+  .desk { width: min(1440px, calc(100% - 2.5rem)); }
+  .workspace {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-areas:
+      "stage geo"
+      "composer geo"
+      "grid grid";
+    align-items: stretch;
+  }
+  .stage { grid-area: stage; }
+  .geo-panel { grid-area: geo; margin-top: 0; }
+  .composer-panel { grid-area: composer; margin-top: 0; }
+  .grid-panel { grid-area: grid; margin-top: 0; }
+}
+
+@media (min-width: 1280px) {
+  .desk { width: min(1600px, calc(100% - 2.5rem)); }
+  .workspace {
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.9fr) minmax(280px, 0.95fr);
+    grid-template-areas:
+      "stage geo composer"
+      "grid geo composer";
+  }
+  .workspace .composer-slots,
+  .workspace .composer-slots[data-cols="4"],
+  .workspace .composer-slots[data-cols="8"] {
+    grid-template-columns: 1fr 1fr;
+  }
+  #bpm-value { font-size: clamp(4.2rem, 7vw, 7.2rem); }
+  .stage { padding: 1.5rem 1.25rem 1.2rem; }
 }
 
 @media (max-width: 720px) {
