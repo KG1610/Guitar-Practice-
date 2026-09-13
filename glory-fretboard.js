@@ -300,7 +300,8 @@ export function mountFretboard(opts = {}) {
       return;
     }
     if (drillMode === 'ascend-click') {
-      if (kind !== 'click') return;
+      // Advance on beats only so mix=both (click every 16th) stays playable.
+      if (kind !== 'beat') return;
       const notes = collectAscendingNotes();
       if (!notes.length) return;
       const target = notes[ascendCursor % notes.length];
