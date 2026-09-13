@@ -15,6 +15,7 @@ Open `http://localhost:5173`. Headphones recommended. **Space** starts/stops.
 
 - **Multi-bar forms** — patterns can define a `form` array of 4–8 bars; the player advances bar-by-bar then loops the whole form. Grid + playhead follow the current bar.
 - **Chorus lift / verse chug** — original multi-bar metalcore practice beds (inspired energy, not transcriptions).
+- **8-bar jam beds** — clear 16ths / 8ths / quarters, a tasty change around bar 5, and a bar-8 fill. Original practice patterns (not transcriptions).
 - **Session memory** — restores pattern, BPM, mix, volume, count-in, ramp, riff lock, and fretboard/drill choices from `localStorage` key `practice-desk-v1`.
 - **Riff lock** — optional dark muted pulse under kick hits (Tone.js DuoSynth) so you can lock a chug feel without a full guitar sim.
 - **Neck drills** — Off | Roots on 1 | Color on snare | Ascend with click.
@@ -37,11 +38,11 @@ Out of scope for v1: per-hit grid editing inside a custom bar.
 
 ## Copyright / inspiration
 
-Feels are **original practice patterns**. Names like “Chorus lift · metalcore” describe vibe only. They are **not** transcriptions of any song (including Forsaken / AILD). Do not paste Songsterr tabs, lyrics, or audio into this repo.
+Feels are **original practice patterns**. Names like “Chorus lift · metalcore” or “Jam bed · tasty simple” describe vibe only. They are **not** transcriptions of any song (including Forsaken / AILD / Provoke the Truth). Do not paste Songsterr tabs, lyrics, or audio into this repo.
 
 ## Default take
 
-Pick **Chorus lift · metalcore** or the classic 16th chug, kit + click, grid visible. Hit Play.
+Pick **Clear 16ths · lock** or **Chorus lift · metalcore**, kit + click, grid visible. Hit Play.
 
 ## Feels
 
@@ -49,6 +50,12 @@ Pick **Chorus lift · metalcore** or the classic 16th chug, kit + click, grid vi
 |---|---|
 | Chorus lift · metalcore | Inspired practice feel — not a transcription |
 | Verse chug · 4-bar | Palm-mute groove with bar-4 twist |
+| Clear 16ths · lock | Jam bed · clear 16ths |
+| Clear 8ths · breathe | Jam bed · clear 8ths |
+| Pocket quarters · pulse | Jam bed · big pulse |
+| Jam bed · tasty simple | Provoke-the-Truth energy — original |
+| Four + change · AB | Jam bed · crystal AB |
+| Metal drive · 8 | Inspired metalcore feel — not a transcription |
 | 16th chug | AILD / metalcore |
 | Breakdown | AILD / metalcore |
 | Gallop | Metal / 1-e-a |
