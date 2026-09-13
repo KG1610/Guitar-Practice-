@@ -13,7 +13,7 @@ export const SCALES = [
     intervals: [0, 2, 3, 5, 7, 8, 11],
     degrees: ['1', '2', 'b3', '4', '5', 'b6', '7'],
     colorTone: 11,
-    hint: 'The 7 (gold) is the harmonic minor sound — lean into it.',
+    hint: 'The 7 (amber) is the harmonic minor sound — lean into it.',
   },
   {
     id: 'natural-minor',
@@ -215,6 +215,8 @@ export function mountFretboard(opts = {}) {
         ascendCursor = 0;
         notify();
         syncDrillChips();
+        btn.blur();
+        console.log('[desk] drill', drillMode);
       });
       drillChipsEl.appendChild(btn);
     }
@@ -283,11 +285,12 @@ export function mountFretboard(opts = {}) {
     pulseTimer = setTimeout(() => {
       nodes.forEach((el) => el.classList.remove('pulse'));
       pulseTimer = null;
-    }, 180);
+    }, 280);
   }
 
   function onDrumEvent(detail) {
     if (!detail || drillMode === 'off') return;
+    try {
     const kind = detail.kind;
     if (drillMode === 'roots-on-1') {
       if (kind === 'kick' || (kind === 'beat' && detail.step === 0)) {
@@ -314,8 +317,11 @@ export function mountFretboard(opts = {}) {
         pulseTimer = setTimeout(() => {
           node.classList.remove('pulse');
           pulseTimer = null;
-        }, 160);
+        }, 280);
       }
+    }
+    } catch (err) {
+      console.warn('[desk] drill pulse', err);
     }
   }
 

@@ -4,6 +4,7 @@
   { "id": "chug-16th", "file": "chug-16th.json" },
   { "id": "breakdown-halftime", "file": "breakdown-halftime.json" },
   { "id": "gallop", "file": "gallop.json" },
+  { "id": "triplet-pulse", "file": "triplet-pulse.json" },
   { "id": "andy-16ths", "file": "andy-16ths.json" },
   { "id": "satch-8ths", "file": "satch-8ths.json" },
   { "id": "double-kick", "file": "double-kick.json" },

@@ -7,7 +7,7 @@ import {
 export function createEngine(ui, audio) {
   const {
     beatPads, syllablesEl, stepGrid, trackRows, stepSyllable,
-    formMeta, formLengthEl, formBarLabel, barPlayhead, patternSub,
+    formMeta, formLengthEl, formBarLabel, barPlayhead, patternSub, geometry,
   } = ui;
   const {
     kick, snareNoise, snareBody, hat, click, riffSynth,
@@ -104,6 +104,7 @@ export function createEngine(ui, audio) {
       }
       trackRows.appendChild(row);
     }
+    try { geometry?.rebuild?.(); } catch (err) { console.warn('geometry rebuild', err); }
   }
 
   function highlight(stepIndex) {
@@ -124,6 +125,7 @@ export function createEngine(ui, audio) {
     trackRows.querySelectorAll('.track-hits').forEach((row) => {
       [...row.children].forEach((el, i) => el.classList.toggle('on', i === stepIndex));
     });
+    try { geometry?.setStep?.(stepIndex); } catch (err) { console.warn('geometry step', err); }
   }
 
   function refreshFormUi(highlightStep = state.step) {
@@ -139,8 +141,8 @@ export function createEngine(ui, audio) {
     highlight(highlightStep);
   }
 
-  function triggerClick(time, stepIndex, velocity) {
-    if (state.mix === 'kit') return;
+  function triggerClick(time, stepIndex, velocity, { force = false } = {}) {
+    if (!force && state.mix === 'kit') return;
     click.triggerAttackRelease(stepIndex === 0 ? 'C7' : 'G6', '32n', time, velocity);
   }
 
@@ -152,7 +154,11 @@ export function createEngine(ui, audio) {
   function emitDrumEvent(kind, stepIndex, time, bar) {
     const detail = { kind, step: stepIndex, bar, time };
     window.dispatchEvent(new CustomEvent('practice-desk-drum', { detail }));
-    if (state.fretboardApi?.onDrumEvent) state.fretboardApi.onDrumEvent(detail);
+    try {
+      if (state.fretboardApi?.onDrumEvent) state.fretboardApi.onDrumEvent(detail);
+    } catch (err) {
+      console.warn('drill event', err);
+    }
   }
 
   function triggerStep(time, stepIndex) {
