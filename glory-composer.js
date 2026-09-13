@@ -15,12 +15,17 @@ export function readCustoms() {
 }
 
 export function writeCustoms(list) {
-  localStorage.setItem(CUSTOMS_KEY, JSON.stringify(list));
+  try {
+    localStorage.setItem(CUSTOMS_KEY, JSON.stringify(list));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function deleteCustom(id) {
   const next = readCustoms().filter((p) => p.id !== id);
-  writeCustoms(next);
+  if (!writeCustoms(next)) return null;
   return next;
 }
 
@@ -30,6 +35,13 @@ function cloneTracks(src = {}) {
     snare: [...(src.snare || [])],
     hat: [...(src.hat || [])],
   };
+}
+
+function gridOf(pattern, tracks) {
+  const fromPattern = Number(pattern?.stepsPerBar);
+  if (fromPattern) return fromPattern;
+  const len = tracks?.kick?.length || tracks?.snare?.length || tracks?.hat?.length;
+  return len || 16;
 }
 
 export function extractBar(pattern, barIndex = 0) {
@@ -42,6 +54,7 @@ export function extractBar(pattern, barIndex = 0) {
       ...cloneTracks(b),
       sourceId: pattern.id,
       sourceBar: idx,
+      stepsPerBar: gridOf(pattern, b),
     };
   }
   if (pattern.tracksByBar?.length) {
@@ -52,6 +65,7 @@ export function extractBar(pattern, barIndex = 0) {
       ...cloneTracks(b),
       sourceId: pattern.id,
       sourceBar: idx,
+      stepsPerBar: gridOf(pattern, b),
     };
   }
   if (pattern.tracks) {
@@ -60,6 +74,7 @@ export function extractBar(pattern, barIndex = 0) {
       ...cloneTracks(pattern.tracks),
       sourceId: pattern.id,
       sourceBar: 0,
+      stepsPerBar: gridOf(pattern, pattern.tracks),
     };
   }
   return null;
@@ -80,24 +95,38 @@ export function extractCurrentBar() {
     ...cloneTracks(tracks),
     sourceId: pattern.id,
     sourceBar: idx,
+    stepsPerBar: gridOf(pattern, tracks),
   };
+}
+
+export function slotGrids(slots) {
+  return [...new Set(
+    slots.filter(Boolean).map((b) => Number(b.stepsPerBar) || b.kick?.length || 16),
+  )];
 }
 
 export function buildPatternFromSlots(slots, {
   id,
   name,
-  stepsPerBar = 16,
+  stepsPerBar,
   bpmDefault = 90,
 } = {}) {
   const filled = slots.filter(Boolean);
   if (!filled.length) return null;
+  const grids = slotGrids(slots);
+  if (grids.length > 1) {
+    const err = new Error('mixed-grid');
+    err.grids = grids;
+    throw err;
+  }
+  const grid = Number(stepsPerBar) || grids[0] || 16;
   return {
     id: id || `custom-${Date.now().toString(36)}`,
     name: name || 'Custom form',
     subtitle: 'Custom',
     description: 'Assembled in Form Composer',
     bpmDefault,
-    stepsPerBar,
+    stepsPerBar: grid,
     form: filled.map((b, i) => ({
       label: b.label || `Bar ${i + 1}`,
       kick: [...(b.kick || [])],
@@ -178,7 +207,6 @@ export function mountComposer(root, api) {
         dragFromSlot = i;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('application/x-composer-slot', String(i));
-        e.dataTransfer.setData('text/plain', bar.label);
         cell.classList.add('dragging');
       });
       cell.addEventListener('dragend', () => {
@@ -225,6 +253,7 @@ export function mountComposer(root, api) {
       hat: [...bar.hat],
       sourceId: bar.sourceId,
       sourceBar: bar.sourceBar,
+      stepsPerBar: bar.stepsPerBar || bar.kick?.length || 16,
     };
     renderSlots();
     setStatus(`Added "${bar.label}" -> slot ${idx + 1}`);
@@ -232,17 +261,17 @@ export function mountComposer(root, api) {
   }
 
   function handleDropOnSlot(slotIndex, e) {
-    const slotMove = e.dataTransfer.getData('application/x-composer-slot');
-    if (slotMove !== '') {
-      const from = Number(slotMove);
-      if (Number.isFinite(from) && from !== slotIndex && slots[from]) {
-        const tmp = slots[slotIndex];
-        slots[slotIndex] = slots[from];
-        slots[from] = tmp;
-        renderSlots();
-        setStatus(`Moved to slot ${slotIndex + 1}`);
-      }
+    const mimeFrom = e.dataTransfer.getData('application/x-composer-slot');
+    const from = dragFromSlot != null
+      ? dragFromSlot
+      : (mimeFrom !== '' ? Number(mimeFrom) : NaN);
+    if (Number.isFinite(from) && from !== slotIndex && slots[from]) {
+      const tmp = slots[slotIndex];
+      slots[slotIndex] = slots[from];
+      slots[from] = tmp;
       dragFromSlot = null;
+      renderSlots();
+      setStatus(`Moved to slot ${slotIndex + 1}`);
       return;
     }
     const patternId = e.dataTransfer.getData('application/x-practice-pattern')
@@ -253,9 +282,7 @@ export function mountComposer(root, api) {
       setStatus(`Unknown pattern: ${patternId}`);
       return;
     }
-    let bar;
-    if (state.pattern?.id === patternId) bar = extractCurrentBar();
-    else bar = extractBar(pattern, 0);
+    const bar = state.pattern?.id === patternId ? extractCurrentBar() : extractBar(pattern, 0);
     placeBar(bar, slotIndex);
   }
 
@@ -289,14 +316,26 @@ export function mountComposer(root, api) {
     setStatus('Cleared');
   });
 
-  playBtn?.addEventListener('click', async () => {
-    const pattern = buildPatternFromSlots(slots, {
-      id: `composer-preview-${Date.now().toString(36)}`,
-      name: 'Composer form',
-      stepsPerBar: api.getStepsPerBar?.() ?? state.pattern?.stepsPerBar ?? 16,
+  function assemble(id, name) {
+    const filled = slots.filter(Boolean);
+    if (!filled.length) return null;
+    const grids = slotGrids(slots);
+    if (grids.length > 1) {
+      setStatus(`Mix of ${grids.join(' / ')}-step bars — use one grid`);
+      return null;
+    }
+    return buildPatternFromSlots(slots, {
+      id,
+      name,
+      stepsPerBar: grids[0],
       bpmDefault: api.getBpm?.() ?? 90,
     });
+  }
+
+  playBtn?.addEventListener('click', async () => {
+    const pattern = assemble(`composer-preview-${Date.now().toString(36)}`, 'Composer form');
     if (!pattern) {
+      if (slots.filter(Boolean).length) return;
       setStatus('Add at least one bar first');
       return;
     }
@@ -314,15 +353,14 @@ export function mountComposer(root, api) {
     const name = window.prompt('Name this form', suggested);
     if (name == null) return;
     const trimmed = name.trim() || suggested;
-    const pattern = buildPatternFromSlots(slots, {
-      id: `custom-${Date.now().toString(36)}`,
-      name: trimmed,
-      stepsPerBar: api.getStepsPerBar?.() ?? state.pattern?.stepsPerBar ?? 16,
-      bpmDefault: api.getBpm?.() ?? (Number(state.pattern?.bpmDefault) || 90),
-    });
+    const pattern = assemble(`custom-${Date.now().toString(36)}`, trimmed);
+    if (!pattern) return;
     const list = readCustoms();
     list.unshift(pattern);
-    writeCustoms(list);
+    if (!writeCustoms(list)) {
+      setStatus('Couldn’t save — storage blocked or full');
+      return;
+    }
     api.onCustomsChanged?.();
     setStatus(`Saved "${trimmed}" under My forms`);
   });

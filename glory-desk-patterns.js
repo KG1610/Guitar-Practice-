@@ -41,6 +41,9 @@ export function attachPatterns(api) {
     if (!pattern?.id) throw new Error('Invalid pattern');
     state.pattern = pattern;
     state.currentId = pattern.id;
+    if (!String(pattern.id).startsWith('composer-preview-')) {
+      state.lastRealPatternId = pattern.id;
+    }
     applyLoadedPattern({ applyDefaultBpm });
   }
 
@@ -66,37 +69,41 @@ export function attachPatterns(api) {
     const small = document.createElement('small');
     small.textContent = sub;
     btn.append(name, small);
-    if (custom) {
-      const del = document.createElement('span');
-      del.className = 'chip-del';
-      del.title = 'Delete custom form';
-      del.setAttribute('aria-label', `Delete ${data.name}`);
-      del.textContent = 'x';
-      del.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!window.confirm(`Delete "${data.name}"?`)) return;
-        deleteCustom(data.id);
-        if (state.currentId === data.id) {
-          const fallback = index[0]?.id;
-          if (fallback) loadPatternById(fallback);
-        }
-        renderChips();
-      });
-      btn.appendChild(del);
-    }
     btn.addEventListener('dragstart', (e) => {
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('application/x-practice-pattern', data.id);
       e.dataTransfer.setData('text/plain', data.id);
     });
-    btn.addEventListener('click', async (e) => {
-      if (e.target.closest('.chip-del')) return;
+    btn.addEventListener('click', async () => {
       const wasPlaying = state.playing;
       if (wasPlaying) stop();
       loadPatternById(data.id);
       if (wasPlaying) await start({ skipCountIn: true });
     });
-    return btn;
+    if (!custom) return btn;
+    const wrap = document.createElement('div');
+    wrap.className = 'chip-wrap';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'chip-del';
+    del.title = 'Delete custom form';
+    del.setAttribute('aria-label', `Delete ${data.name}`);
+    del.textContent = 'x';
+    del.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!window.confirm(`Delete "${data.name}"?`)) return;
+      if (deleteCustom(data.id) == null) return;
+      if (state.currentId === data.id) {
+        const wasPlaying = state.playing || state.countingIn;
+        if (wasPlaying) stop();
+        const fallback = index[0]?.id;
+        if (fallback) loadPatternById(fallback);
+        if (wasPlaying) await start({ skipCountIn: true });
+      }
+      renderChips();
+    });
+    wrap.append(btn, del);
+    return wrap;
   }
 
   function renderChips() {

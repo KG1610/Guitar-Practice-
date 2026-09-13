@@ -229,9 +229,13 @@ function stop() {
 function persistSession() {
   if (state.suppressPersist) return;
   const fret = state.fretboardApi?.getState?.() ?? {};
+  const id = state.currentId;
+  const persistId = (id && !String(id).startsWith('composer-preview-'))
+    ? id
+    : (state.lastRealPatternId || index[0]?.id);
   try {
   writeSession({
-    patternId: state.currentId,
+    patternId: persistId,
     bpm: Number(bpmInput.value),
     mix: state.mix,
     volume: Number(volumeInput.value),
