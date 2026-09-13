@@ -40,6 +40,13 @@ export function createEngine(ui, audio) {
     [...barPlayhead.children].forEach((el, i) => el.classList.toggle('on', i === idx));
   }
 
+  function seekToBar(bar) {
+    const n = formLength();
+    state.barIndex = ((Number(bar) % n) + n) % n;
+    state.step = 0;
+    refreshFormUi(0);
+  }
+
   function rebuildBarPlayhead() {
     const n = formLength();
     const multi = isMultiBar();
@@ -59,7 +66,8 @@ export function createEngine(ui, audio) {
       cell.dataset.bar = String(i);
       cell.textContent = String(i + 1);
       cell.title = bars[i]?.label ?? `Bar ${i + 1}`;
-      cell.setAttribute('aria-label', `Bar ${i + 1}: ${bars[i]?.label ?? ''}`);
+      cell.setAttribute('aria-label', `Seek to bar ${i + 1}: ${bars[i]?.label ?? ''}`);
+      cell.addEventListener('click', () => seekToBar(i));
       barPlayhead.appendChild(cell);
     }
     updateFormMeta();
@@ -118,7 +126,7 @@ export function createEngine(ui, audio) {
     });
   }
 
-  function refreshFormUi() {
+  function refreshFormUi(highlightStep = state.step) {
     updateFormMeta();
     if (isMultiBar()) {
       const bar = currentBar();
@@ -127,8 +135,8 @@ export function createEngine(ui, audio) {
         patternSub.textContent = base ? `${base} · ${bar.label}` : bar.label;
       }
       rebuildGrid();
-      highlight(state.step);
     }
+    highlight(highlightStep);
   }
 
   function triggerClick(time, stepIndex, velocity) {
@@ -141,8 +149,8 @@ export function createEngine(ui, audio) {
     riffSynth.triggerAttackRelease('E1', '32n', time, 0.7);
   }
 
-  function emitDrumEvent(kind, stepIndex, time) {
-    const detail = { kind, step: stepIndex, bar: state.barIndex, time };
+  function emitDrumEvent(kind, stepIndex, time, bar) {
+    const detail = { kind, step: stepIndex, bar, time };
     window.dispatchEvent(new CustomEvent('practice-desk-drum', { detail }));
     if (state.fretboardApi?.onDrumEvent) state.fretboardApi.onDrumEvent(detail);
   }
@@ -150,6 +158,7 @@ export function createEngine(ui, audio) {
   function triggerStep(time, stepIndex) {
     const tracks = currentTracks();
     const spb = stepsPerBar();
+    const barSnap = state.barIndex;
     const isBeat = stepIndex % (spb / 4) === 0;
     const vel = stepIndex === 0 ? 1 : isBeat ? 0.55 : 0.22;
 
@@ -158,21 +167,27 @@ export function createEngine(ui, audio) {
       if (tracks.kick?.[stepIndex]) {
         kick.triggerAttackRelease('C1', '16n', time);
         triggerRiff(time);
-        Tone.getDraw().schedule(() => emitDrumEvent('kick', stepIndex, time), time);
+        Tone.getDraw().schedule(() => emitDrumEvent('kick', stepIndex, time, barSnap), time);
       }
       if (tracks.snare?.[stepIndex]) {
         snareNoise.triggerAttackRelease('16n', time);
         snareBody.triggerAttackRelease('G2', '32n', time);
-        Tone.getDraw().schedule(() => emitDrumEvent('snare', stepIndex, time), time);
+        Tone.getDraw().schedule(() => emitDrumEvent('snare', stepIndex, time, barSnap), time);
       }
       if (tracks.hat?.[stepIndex]) hat.triggerAttackRelease('32n', time, undefined, 0.32);
     }
 
-    if (isBeat) Tone.getDraw().schedule(() => emitDrumEvent('beat', stepIndex, time), time);
-    if (state.mix !== 'kit') Tone.getDraw().schedule(() => emitDrumEvent('click', stepIndex, time), time);
-    else if (isBeat) Tone.getDraw().schedule(() => emitDrumEvent('click', stepIndex, time), time);
+    if (isBeat) Tone.getDraw().schedule(() => emitDrumEvent('beat', stepIndex, time, barSnap), time);
+    if (state.mix !== 'kit') Tone.getDraw().schedule(() => emitDrumEvent('click', stepIndex, time, barSnap), time);
+    else if (isBeat) Tone.getDraw().schedule(() => emitDrumEvent('click', stepIndex, time, barSnap), time);
 
-    Tone.getDraw().schedule(() => highlight(stepIndex), time);
+    // Refresh multi-bar form UI on the first step of the (already advanced) bar,
+    // not at wrap time — keeps playhead/grid in sync with audio.
+    if (stepIndex === 0) {
+      Tone.getDraw().schedule(() => refreshFormUi(0), time);
+    } else {
+      Tone.getDraw().schedule(() => highlight(stepIndex), time);
+    }
   }
 
   return {
@@ -183,6 +198,7 @@ export function createEngine(ui, audio) {
     rebuildGrid,
     highlight,
     refreshFormUi,
+    seekToBar,
     triggerClick,
     triggerStep,
     updateFormMeta,
