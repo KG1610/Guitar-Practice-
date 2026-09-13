@@ -5,6 +5,9 @@ import { createAudio } from './glory-audio.js';
 import { readSession, writeSession } from './glory-session.js';
 import { state } from './glory-state.js';
 import { createEngine } from './glory-engine.js';
+import { mountGeometry } from './glory-geometry.js';
+import { toneSubdivision } from './glory-form.js';
+import { debugLog, debugError, debugHud, mountDebug } from './glory-debug.js';
 
 const modules = import.meta.glob('./patterns/*.json', { eager: true, import: 'default' });
 const catalog = {};
@@ -42,10 +45,12 @@ const mixBtns = [...document.querySelectorAll('.mix-btn')];
 state.currentId = index[0]?.id ?? 'chug-16th';
 
 const audio = createAudio();
+const geometry = mountGeometry(document.getElementById('geometry'));
 const engine = createEngine(
   {
     beatPads, syllablesEl, stepGrid, trackRows, stepSyllable,
     formMeta, formLengthEl, formBarLabel, barPlayhead, patternSub,
+    geometry,
   },
   audio,
 );
@@ -62,6 +67,9 @@ function setBpm(bpm) {
 
 function setStatus(text) {
   statusEl.textContent = text;
+  debugHud(
+    `play=${state.playing ? 'on' : 'off'} countIn=${state.countingIn ? 'on' : 'off'} bpm=${bpmInput?.value} mix=${state.mix} drill=${state.fretboardApi?.getState?.()?.drillMode ?? '—'} ctx=${typeof Tone !== 'undefined' ? Tone.getContext?.().state : '—'}`,
+  );
 }
 
 function setMix(next) {
@@ -89,7 +97,7 @@ function ensureLoop() {
     state.loop.dispose();
     state.loop = null;
   }
-  const subdivision = (state.pattern?.stepsPerBar ?? 16) === 16 ? '16n' : '8n';
+  const subdivision = toneSubdivision(state.pattern?.stepsPerBar ?? 16);
   state.loop = new Tone.Loop((time) => {
     engine.triggerStep(time, state.step);
     state.step += 1;
@@ -152,14 +160,32 @@ function loadPatternById(id, { applyDefaultBpm = true } = {}) {
   persistSession();
 }
 
-async function countIn() {
+let playToken = 0;
+let countInFinish = null;
+
+function finishCountIn() {
+  if (!countInFinish) return;
+  const done = countInFinish;
+  countInFinish = null;
+  done();
+}
+
+async function countIn(token) {
   state.countingIn = true;
   setStatus('Count-in');
+  debugLog('count-in');
   const beats = 4;
   await new Promise((resolve) => {
+    countInFinish = resolve;
     let i = 0;
     const counter = new Tone.Loop((time) => {
-      engine.triggerClick(time, i === 0 ? 0 : 1, i === 0 ? 1 : 0.55);
+      if (token !== playToken) {
+        counter.stop(time);
+        counter.dispose();
+        finishCountIn();
+        return;
+      }
+      engine.triggerClick(time, i === 0 ? 0 : 1, i === 0 ? 1 : 0.55, { force: true });
       const beat = i;
       Tone.getDraw().schedule(() => {
         engine.highlight(Math.floor((beat / 4) * (state.pattern?.stepsPerBar ?? 16)));
@@ -170,50 +196,68 @@ async function countIn() {
         counter.stop(time);
         Tone.getDraw().schedule(() => {
           counter.dispose();
-          resolve();
+          finishCountIn();
         }, time);
       }
     }, '4n');
     counter.start(0);
     Tone.getTransport().start();
+    setTimeout(() => finishCountIn(), 8000);
   });
   state.countingIn = false;
 }
 
 async function start({ skipCountIn = false } = {}) {
-  if (!state.pattern) loadPatternById(state.currentId);
-  await Tone.start();
-  engine.applyMix();
-  if (rampEnabled.checked) setBpm(Number(rampStart.value) || state.pattern.bpmDefault || 90);
-  else setBpm(Number(bpmInput.value));
-  state.step = 0;
-  state.barIndex = 0;
-  state.barsSinceRamp = 0;
-  engine.refreshFormUi();
-  state.playing = true;
-  playBtn.textContent = 'Stop';
-  playBtn.setAttribute('aria-pressed', 'true');
-  stageEl.classList.add('is-playing');
+  const token = ++playToken;
+  try {
+    if (!state.pattern) loadPatternById(state.currentId);
+    await Tone.start();
+    if (Tone.getContext().state !== 'running') await Tone.getContext().resume();
+    if (token !== playToken) return;
+    engine.applyMix();
+    if (rampEnabled.checked) setBpm(Number(rampStart.value) || state.pattern.bpmDefault || 90);
+    else setBpm(Number(bpmInput.value));
+    state.step = 0;
+    state.barIndex = 0;
+    state.barsSinceRamp = 0;
+    engine.refreshFormUi();
+    state.playing = true;
+    playBtn.textContent = 'Stop';
+    playBtn.setAttribute('aria-pressed', 'true');
+    stageEl.classList.add('is-playing');
 
-  Tone.getTransport().stop();
-  Tone.getTransport().position = 0;
-  if (countInEl.checked && !skipCountIn) {
-    await countIn();
-    if (!state.playing) return;
     Tone.getTransport().stop();
     Tone.getTransport().position = 0;
-  }
+    if (countInEl.checked && !skipCountIn) {
+      await countIn(token);
+      if (token !== playToken || !state.playing) return;
+      Tone.getTransport().stop();
+      Tone.getTransport().position = 0;
+    }
 
-  ensureLoop();
-  state.loop.start(0);
-  Tone.getTransport().start();
-  setStatus('Playing · space to stop');
+    ensureLoop();
+    state.loop.start(0);
+    Tone.getTransport().start();
+    setStatus('Playing · space to stop');
+    debugLog('start ok', { bpm: bpmInput.value, pattern: state.currentId, skipCountIn });
+  } catch (err) {
+    debugError('start', err);
+    stop();
+    setStatus(`Couldn’t start — click Play again (${err.message || err})`);
+  }
 }
 
 function stop() {
+  debugLog('stop');
+  playToken += 1;
+  finishCountIn();
   Tone.getTransport().stop();
   Tone.getTransport().cancel();
-  if (state.loop) state.loop.stop();
+  if (state.loop) {
+    state.loop.stop();
+    state.loop.dispose();
+    state.loop = null;
+  }
   state.playing = false;
   state.countingIn = false;
   playBtn.textContent = 'Play';
@@ -227,6 +271,7 @@ function stop() {
 function persistSession() {
   if (state.suppressPersist) return;
   const fret = state.fretboardApi?.getState?.() ?? {};
+  try {
   writeSession({
     patternId: state.currentId,
     bpm: Number(bpmInput.value),
@@ -248,6 +293,9 @@ function persistSession() {
       drillMode: fret.drillMode,
     },
   });
+  } catch (err) {
+    console.warn('session persist', err);
+  }
 }
 
 function restoreSession(session) {
@@ -317,15 +365,20 @@ mixBtns.forEach((btn) => {
 window.addEventListener('keydown', (e) => {
   if (e.code !== 'Space') return;
   const tag = document.activeElement?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   e.preventDefault();
   playBtn.click();
 });
 
 const saved = readSession();
+mountDebug();
+debugLog('boot');
 renderChips();
 state.fretboardApi = mountFretboard({
-  onChange: () => persistSession(),
+  onChange: () => {
+    debugLog('fretboard', state.fretboardApi?.getState?.());
+    persistSession();
+  },
   initial: saved?.fretboard,
 });
 if (saved) restoreSession(saved);

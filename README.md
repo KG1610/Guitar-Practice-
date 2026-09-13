@@ -18,6 +18,7 @@ Open `http://localhost:5173`. Headphones recommended. **Space** starts/stops.
 - **Session memory** — restores pattern, BPM, mix, volume, count-in, ramp, riff lock, and fretboard/drill choices from `localStorage` key `practice-desk-v1`.
 - **Riff lock** — optional dark muted pulse under kick hits (Tone.js DuoSynth) so you can lock a chug feel without a full guitar sim.
 - **Neck drills** — Off | Roots on 1 | Color on snare | Ascend with click.
+- **Rhythm geometry** — polar view of the current bar: 4-beat diamond, kick polygon, snare, hats, moving playhead. 12-step grooves use eighth-note triplets (`8t`).
 
 ## Copyright / inspiration
 
@@ -36,6 +37,7 @@ Pick **Chorus lift · metalcore** or the classic 16th chug, kit + click, grid vi
 | 16th chug | AILD / metalcore |
 | Breakdown | AILD / metalcore |
 | Gallop | Metal / 1-e-a |
+| Triplet pulse | Geometry · 3 per quarter |
 | Accented 16ths | Andy James / shred |
 | Straight 8ths | Satriani / rock-metal |
 | Double-kick | Metalcore / death-adjacent |
@@ -71,7 +73,7 @@ Legacy one-bar patterns with only `tracks` still work (treated as a 1-bar form).
 
 ## Fretboard
 
-Default **A harmonic minor**. Switch natural / harmonic / melodic minor, pentatonic, Phrygian, Dorian, major. Ember = root, gold = color tone (the 7 in harmonic minor).
+Default **A harmonic minor**. Switch natural / harmonic / melodic minor, pentatonic, Phrygian, Dorian, major. Teal = root, amber = color tone (the 7 in harmonic minor).
 
 Suggested patterns: all notes, five boxes, 3 notes per string. Notes outside the selected pattern stay dim so you still see the whole neck.
 

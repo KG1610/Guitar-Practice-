@@ -1,0 +1,13 @@
+{
+  "id": "triplet-pulse",
+  "name": "Triplet pulse",
+  "subtitle": "Geometry · 3 per quarter",
+  "description": "Each quarter splits into 3. Euclidean kick (5 in 12) so the polygon isn’t a square. Inspired feel, not a transcription.",
+  "bpmDefault": 80,
+  "stepsPerBar": 12,
+  "tracks": {
+    "kick":  [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0],
+    "snare": [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
+    "hat":   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  }
+}
