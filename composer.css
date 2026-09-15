@@ -191,27 +191,47 @@
 }
 
 .chip-wrap .chip {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+  border-radius: 0;
 }
 
+.chip-fav,
 .chip-del {
   appearance: none;
-  border: 1px dashed var(--line);
-  border-left: 0;
+  border: 1px solid var(--line);
   background: var(--bg-2);
   color: var(--muted);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   line-height: 1;
   padding: 0 0.55rem;
-  border-radius: 0 14px 14px 0;
   cursor: pointer;
 }
 
+.chip-fav {
+  border-right: 0;
+  border-radius: 14px 0 0 14px;
+}
+
+.chip-fav.on {
+  color: var(--gold);
+}
+
+.chip-fav:hover,
 .chip-del:hover {
   color: var(--text);
   background: color-mix(in srgb, var(--ember) 22%, var(--bg-2));
+}
+
+.chip-wrap:not(:has(.chip-del)) .chip {
+  border-top-right-radius: 14px;
+  border-bottom-right-radius: 14px;
+}
+
+.chip-del {
+  border-left: 0;
+  border-style: dashed;
+  border-radius: 0 14px 14px 0;
+  font-size: 0.85rem;
 }
 
 .chip[draggable="true"] {

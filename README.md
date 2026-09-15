@@ -21,6 +21,7 @@ Open `http://localhost:5173`. Headphones recommended. **Space** starts/stops.
 - **Neck drills** — Off | Roots on 1 | Color on snare | Ascend with click.
 - **Rhythm geometry** — polar view of the current bar: 4-beat diamond, kick polygon, snare, hats, moving playhead. 12-step grooves use eighth-note triplets (`8t`).
 - **Form composer** — click-add / drag-drop bars into a 4–8 slot strip, play the assembled form, save named customs under **My forms** (`practice-desk-customs-v1`).
+- **Favourites** — star presets or My forms; they pin under **Favourites** (`practice-desk-favs-v1`).
 
 
 ## Composer
