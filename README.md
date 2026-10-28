@@ -20,8 +20,33 @@ Open `http://localhost:5173`. Headphones recommended. **Space** starts and stops
 
 For going from a reel to a loop in under a minute. Mac, local, personal practice. The helper does not send cookies or log into anything.
 
-1. Open **Riff Room** and paste a Facebook, Instagram, or YouTube link. A file picker is there for a clip you already have.
+1. Open **Riff Room**. Every link you paste is saved on this Mac and shows up in **Songs** (title, uploader, a still from the clip, BPM, key, date added). Click a song to load it with the loop points, speed, downbeat nudge, and alphaTex you last saved. Rename and delete are on the card. Search and sort sit above the list.
 2. yt-dlp downloads it logged out. ffmpeg transcodes to H.264/AAC (`yuv420p`, `+faststart`) so Safari can play it. The riff is saved under `riffs-library/` (gitignored): title, uploader, source URL, duration, BPM, key, notes, and the tab.
+
+### Song queue
+
+Links Kyle sends in chat, instead of pasting them into the app, go in `riffs.json` at the repo root. The assistant appends an entry and pushes. On startup, and when you press **Sync**, the helper reads that queue and downloads any link that is not already in the local library.
+
+It tries the public file on `main` first:
+
+`https://raw.githubusercontent.com/KG1610/Guitar-Practice-/main/riffs.json`
+
+If that request fails (the file is not on `main` yet, or the machine is offline), it uses the `riffs.json` checked out next to the app. Progress shows as `1 of 3 — title`. A link that resolves to a video already on disk is skipped, so edits are kept.
+
+```json
+{
+  "riffs": [
+    {
+      "url": "https://www.facebook.com/share/r/1FZGC2nZgS/",
+      "title": "Easy A Minor Guitar Solo 80 bpm",
+      "notes": "Den Kondrashev practice reel with tabs",
+      "added": "2026-10-28"
+    }
+  ]
+}
+```
+
+`url` is required (Facebook, Instagram, or YouTube). `title`, `notes`, and `added` (`YYYY-MM-DD`) are optional. A bare array of those objects is accepted too. The queue currently starts with the A minor reel above.
 3. The player loops the whole clip or an A–B section. Speed is 50–100% with pitch preserved (`preservesPitch`). The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
 4. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
 5. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.

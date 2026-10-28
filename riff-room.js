@@ -25,11 +25,15 @@ export function mountRiffRoom(root) {
 
   const state = {
     riff: null,
+    library: [],
+    query: '',
+    sort: 'added-desc',
     loop: true,
     loopA: null,
     loopB: null,
     taps: [],
     speed: 1,
+    speedTimer: 0,
   };
 
   function setView(next) {
@@ -74,6 +78,7 @@ export function mountRiffRoom(root) {
     state.loop = !state.loop;
     q('#riff-loop').setAttribute('aria-pressed', state.loop ? 'true' : 'false');
     applyLoopMode();
+    savePatch({ loopClip: state.loop });
   });
   q('#riff-set-a').addEventListener('click', () => {
     state.loopA = video.currentTime || 0;
@@ -92,7 +97,19 @@ export function mountRiffRoom(root) {
     state.speed = Number(q('#riff-speed').value) / 100;
     video.playbackRate = state.speed;
     paintSpeed();
+    window.clearTimeout(state.speedTimer);
+    state.speedTimer = window.setTimeout(() => savePatch({ speed: state.speed }), 400);
   });
+  q('#riff-sync').addEventListener('click', () => syncQueue());
+  q('#riff-search').addEventListener('input', () => {
+    state.query = q('#riff-search').value;
+    renderPicker();
+  });
+  q('#riff-sort').addEventListener('change', () => {
+    state.sort = q('#riff-sort').value;
+    renderPicker();
+  });
+  q('#riff-rename').addEventListener('click', () => renameRiff(state.riff));
   q('#riff-video-vol').addEventListener('input', () => {
     video.volume = Number(q('#riff-video-vol').value) / 100;
   });
@@ -227,57 +244,126 @@ export function mountRiffRoom(root) {
     poll(body.jobId);
   }
 
-  async function poll(jobId) {
+  async function poll(jobId, { quiet = false } = {}) {
     const timer = setInterval(async () => {
       const res = await fetch(`/api/jobs/${jobId}`);
       const job = await res.json();
-      if (job.status === 'done' && job.riff) {
+      if (job.status === 'done') {
         clearInterval(timer);
-        await refreshList(job.riff.id);
-        openRiff(job.riff);
-        setStatus('Ready — space to play');
+        await refreshList(job.riff?.id);
+        if (job.riff && !quiet) openRiff(job.riff);
+        else if (job.riff && !state.riff) openRiffById(job.riff.id);
+        else if (!state.riff && state.library[0]) openRiffById(state.library[0].id);
+        setStatus(job.skipped ? 'Already in the library' : (job.step || 'Ready — space to play'));
       } else if (job.status === 'error') {
         clearInterval(timer);
         setStatus(job.error || 'Import failed');
       } else {
-        setStatus(job.step || 'Working…');
+        const progress = job.total ? ` (${job.done || 0}/${job.total})` : '';
+        setStatus(`${job.step || 'Working…'}${progress}`);
       }
     }, 600);
   }
 
   async function refreshList(selectId) {
-    let riffs = [];
     try {
       const res = await fetch('/api/riffs');
       if (!res.ok) throw new Error('helper');
-      riffs = (await res.json()).riffs || [];
+      state.library = (await res.json()).riffs || [];
       q('#riff-helper').hidden = true;
     } catch {
       q('#riff-helper').hidden = false;
+      state.library = [];
     }
+    renderPicker(selectId || state.riff?.id);
+  }
+
+  function visibleSongs() {
+    const query = state.query.trim().toLowerCase();
+    const filtered = state.library.filter((riff) => {
+      if (!query) return true;
+      const hay = [riff.title, riff.uploader, riff.key, riff.notes, riff.bpm].join(' ').toLowerCase();
+      return hay.includes(query);
+    });
+    const copy = [...filtered];
+    if (state.sort === 'title') copy.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    else if (state.sort === 'bpm') copy.sort((a, b) => (Number(a.bpm) || 0) - (Number(b.bpm) || 0));
+    else if (state.sort === 'added-asc') copy.sort((a, b) => String(a.addedAt || '').localeCompare(String(b.addedAt || '')));
+    else copy.sort((a, b) => String(b.addedAt || '').localeCompare(String(a.addedAt || '')));
+    return copy;
+  }
+
+  function renderPicker(selectId) {
     const list = q('#riff-list');
+    const songs = visibleSongs();
+    const current = selectId || state.riff?.id;
+    q('#riff-count').textContent = state.library.length
+      ? `${state.library.length} saved`
+      : 'Nothing saved yet';
     list.innerHTML = '';
-    if (!riffs.length) {
-      list.innerHTML = '<p class="riff-empty">Nothing saved yet. Paste a reel link.</p>';
+    if (!songs.length) {
+      list.innerHTML = `<p class="riff-empty">${state.library.length ? 'No songs match that search.' : 'Paste a link, or Sync to pull the queue.'}</p>`;
       return;
     }
-    for (const riff of riffs) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'riff-card';
-      btn.innerHTML = `<strong>${escapeHtml(riff.title)}</strong><span>${escapeHtml(riff.key || '')} · ${Math.round(riff.bpm || 0)} BPM</span>`;
-      if (riff.id === selectId) btn.setAttribute('aria-current', 'true');
-      btn.addEventListener('click', () => openRiff(riff));
-      list.appendChild(btn);
+    for (const riff of songs) {
+      const card = document.createElement('article');
+      card.className = 'song-card';
+      if (riff.id === current) card.setAttribute('aria-current', 'true');
+      const thumb = riff.poster
+        ? `<img src="${escapeHtml(riff.poster)}" alt="" />`
+        : `<span class="song-fallback" aria-hidden="true">${escapeHtml((riff.title || '?').slice(0, 1))}</span>`;
+      card.innerHTML = `
+        <button type="button" class="song-open">
+          ${thumb}
+          <span class="song-copy">
+            <strong>${escapeHtml(riff.title || 'Untitled riff')}</strong>
+            <em>${escapeHtml(riff.uploader || 'Unknown')}</em>
+            <span>${escapeHtml(riff.key || 'Key —')} · ${Math.round(riff.bpm || 0)} BPM</span>
+            <time>${escapeHtml(formatAdded(riff.addedAt))}</time>
+          </span>
+        </button>
+        <span class="song-actions">
+          <button type="button" data-rename>Rename</button>
+          <button type="button" data-delete>Delete</button>
+        </span>`;
+      card.querySelector('.song-open').addEventListener('click', () => openRiffById(riff.id));
+      card.querySelector('[data-rename]').addEventListener('click', (event) => {
+        event.stopPropagation();
+        renameRiff(riff);
+      });
+      card.querySelector('[data-delete]').addEventListener('click', (event) => {
+        event.stopPropagation();
+        deleteRiff(riff);
+      });
+      list.appendChild(card);
     }
+  }
+
+  async function openRiffById(id) {
+    const res = await fetch(`/api/riffs/${id}`);
+    if (!res.ok) {
+      setStatus('That song is no longer in the library');
+      await refreshList();
+      return;
+    }
+    openRiff(await res.json());
   }
 
   function openRiff(riff) {
     state.riff = riff;
     state.loopA = riff.loopA ?? null;
     state.loopB = riff.loopB ?? null;
-    video.src = riff.video;
-    video.load();
+    state.loop = riff.loopClip !== false;
+    state.speed = Math.min(1, Math.max(0.5, Number(riff.speed) || 1));
+    q('#riff-loop').setAttribute('aria-pressed', state.loop ? 'true' : 'false');
+    q('#riff-speed').value = String(Math.round(state.speed * 100));
+    video.playbackRate = state.speed;
+    video.preservesPitch = true;
+    video.webkitPreservesPitch = true;
+    if (video.getAttribute('src') !== riff.video) {
+      video.src = riff.video;
+      video.load();
+    }
     q('#riff-title').textContent = riff.title || 'Untitled riff';
     q('#riff-by').textContent = riff.uploader ? riff.uploader : '';
     q('#riff-bpm').value = String(Math.round(riff.bpm || 80));
@@ -318,9 +404,53 @@ export function mountRiffRoom(root) {
     sync.configure({ bpm: Number(riff.bpm) || 80, offset: Number(riff.downbeatOffset) || 0 });
     paintLoop();
     paintSpeed();
-    root.querySelectorAll('.riff-card').forEach((card) => {
-      card.toggleAttribute('aria-current', card.querySelector('strong')?.textContent === riff.title);
+    renderPicker(riff.id);
+    setStatus(`${riff.title} — space to play`);
+  }
+
+  async function renameRiff(riff) {
+    if (!riff) return;
+    const next = window.prompt('Song name', riff.title || '');
+    if (next == null) return;
+    const title = next.trim();
+    if (!title || title === riff.title) return;
+    const res = await fetch(`/api/riffs/${riff.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
     });
+    if (!res.ok) return;
+    const updated = await res.json();
+    if (state.riff?.id === riff.id) openRiff(updated);
+    else await refreshList(state.riff?.id);
+  }
+
+  async function deleteRiff(riff) {
+    if (!riff) return;
+    if (!window.confirm(`Delete “${riff.title || 'this song'}” from the library on this Mac?`)) return;
+    const res = await fetch(`/api/riffs/${riff.id}`, { method: 'DELETE' });
+    if (!res.ok) return;
+    if (state.riff?.id === riff.id) {
+      state.riff = null;
+      video.removeAttribute('src');
+      video.load();
+      q('#riff-title').textContent = 'Pick a song';
+      q('#riff-by').textContent = '';
+      tab.load('');
+    }
+    await refreshList();
+    setStatus('Deleted from this Mac. Sync will fetch it again if the link is still in the queue.');
+  }
+
+  async function syncQueue() {
+    setStatus('Checking the song queue…');
+    const res = await fetch('/api/queue/sync', { method: 'POST' });
+    const body = await res.json();
+    if (!res.ok) {
+      setStatus(body.error || 'Sync failed');
+      return;
+    }
+    poll(body.jobId, { quiet: true });
   }
 
   async function savePatch(patch) {
@@ -385,11 +515,18 @@ export function mountRiffRoom(root) {
       q('#riff-helper').hidden = false;
     }
     await refreshList();
-    const riffs = await fetch('/api/riffs').then((res) => res.ok ? res.json() : { riffs: [] }).catch(() => ({ riffs: [] }));
-    if (riffs.riffs?.[0]) openRiff(riffs.riffs[0]);
+    if (state.library[0]) await openRiffById(state.library[0].id);
+    syncQueue();
   }
 
   boot();
+}
+
+function formatAdded(iso) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return String(iso).slice(0, 10);
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function fmt(value) {
@@ -412,8 +549,9 @@ function template() {
     <div class="riff-head">
       <div>
         <p class="eyebrow">Riff Room</p>
-        <h2 id="riff-title">Paste a lick</h2>
+        <h2 id="riff-title">Pick a song</h2>
         <p class="riff-by" id="riff-by"></p>
+        <button id="riff-rename" type="button" class="riff-rename">Rename</button>
       </div>
       <p class="riff-status" id="riff-status">Paste a Facebook, Instagram, or YouTube link.</p>
     </div>
@@ -424,12 +562,30 @@ function template() {
         <input id="riff-url" type="url" placeholder="https://www.facebook.com/share/r/…" autocomplete="off" />
       </label>
       <button id="riff-import" type="button">Import</button>
+      <button id="riff-sync" type="button">Sync</button>
       <label class="riff-file">
         Video file
         <input id="riff-file" type="file" accept="video/mp4,video/quicktime,video/*" />
       </label>
     </form>
-    <div id="riff-list" class="riff-list"></div>
+    <section class="song-picker" aria-label="Song library">
+      <div class="grid-head">
+        <span class="grid-title">Songs</span>
+        <span id="riff-count" class="riff-count">Loading…</span>
+      </div>
+      <div class="song-tools">
+        <input id="riff-search" type="search" placeholder="Search title, player, key" />
+        <label>Sort
+          <select id="riff-sort">
+            <option value="added-desc">Newest</option>
+            <option value="added-asc">Oldest</option>
+            <option value="title">Title</option>
+            <option value="bpm">BPM</option>
+          </select>
+        </label>
+      </div>
+      <div id="riff-list" class="song-grid"></div>
+    </section>
     <div class="riff-stage">
       <div class="riff-video-wrap">
         <video id="riff-video" playsinline controls></video>

@@ -15,19 +15,26 @@ import shutil
 import subprocess
 import threading
 import traceback
+import urllib.request
 import uuid
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from server.analyze import analyse_audio
 from server.music import build_alphatex, clean_title, hints_from_text, tab_chroma
+from server.queue import known_keys, normalize_url, parse_queue, pending_entries, read_local_queue
 from server.tab_vision import process_video
 
 ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = Path(os.environ.get('RIFF_LIBRARY', ROOT / 'riffs-library'))
 PORT = int(os.environ.get('RIFF_PORT', '8787'))
 HOST = os.environ.get('RIFF_HOST', '127.0.0.1')
+QUEUE_URL = os.environ.get(
+    'RIFF_QUEUE_URL',
+    'https://raw.githubusercontent.com/KG1610/Guitar-Practice-/main/riffs.json',
+)
 
 ALLOWED_HOSTS = {
     'facebook.com', 'www.facebook.com', 'm.facebook.com', 'fb.watch', 'fb.com', 'www.fb.watch',
@@ -227,7 +234,13 @@ def _finalise(folder: Path, video: Path, meta: dict, source_url: str) -> dict:
             'techniques': vision.get('techniques') or {},
             'warnings': vision.get('warnings') or [],
         },
+        'videoId': folder.name,
+        'sourceUrls': [source_url] if source_url else [],
+        'addedAt': datetime.now(timezone.utc).isoformat(),
+        'speed': 1,
+        'loopClip': True,
         'video': f"/media/{folder.name}/video.mp4",
+        'poster': f"/media/{folder.name}/poster.jpg" if _ensure_poster(folder) else None,
         'tabImage': f"/media/{folder.name}/tab.jpg" if (folder / 'tab.jpg').exists() else None,
         'clearFrame': f"/media/{folder.name}/tab-clear.jpg" if (folder / 'tab-clear.jpg').exists() else None,
         'frames': [
@@ -245,30 +258,122 @@ def _job(job_id: str, **fields) -> None:
         JOBS[job_id].update(fields)
 
 
-def import_url(url: str, job_id: str) -> None:
+def _ensure_poster(folder: Path) -> bool:
+    poster = folder / 'poster.jpg'
+    video = folder / 'video.mp4'
+    if poster.is_file():
+        return True
+    if not video.is_file() or not _which('ffmpeg'):
+        return False
+    proc = subprocess.run(
+        ['ffmpeg', '-y', '-ss', '1', '-i', str(video), '-frames:v', '1',
+         '-vf', 'scale=360:-2', str(poster)],
+        capture_output=True, text=True, timeout=60,
+    )
+    return proc.returncode == 0 and poster.is_file()
+
+
+def _dump_info(url: str) -> dict:
+    """Resolve a link to yt-dlp metadata without downloading the video."""
+    if not _which('yt-dlp'):
+        return {}
+    proc = subprocess.run(
+        [_which('yt-dlp') or 'yt-dlp', '--no-playlist', '--no-cache-dir', '--no-cookies',
+         '--no-download', '--dump-json', url],
+        capture_output=True, text=True, timeout=90,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return {}
+    try:
+        return json.loads(proc.stdout.splitlines()[-1])
+    except json.JSONDecodeError:
+        return {}
+
+
+def _remember_url(record: dict, url: str, notes: str = '') -> dict:
+    folder = LIBRARY / _slug(record.get('id') or '')
+    path = folder / 'riff.json'
+    urls = [item for item in (record.get('sourceUrls') or []) if item]
+    if record.get('sourceUrl'):
+        urls.append(record['sourceUrl'])
+    if url:
+        urls.append(url)
+    record['sourceUrls'] = sorted(set(urls))
+    if notes and not (record.get('notes') or '').strip():
+        record['notes'] = notes
+    if path.is_file():
+        path.write_text(json.dumps(record, indent=2))
+    return record
+
+
+def _existing_for_url(url: str, video_id: str = '') -> dict | None:
+    wanted = normalize_url(url)
+    ident = f'id:{video_id}' if video_id else ''
+    for record in _list_riffs(summaries=False):
+        keys = known_keys([record])
+        if wanted in keys or (ident and ident in keys):
+            return record
+    if video_id:
+        folder = LIBRARY / _slug(video_id)
+        path = folder / 'riff.json'
+        if path.is_file():
+            try:
+                return json.loads(path.read_text())
+            except json.JSONDecodeError:
+                return None
+    return None
+
+
+def import_url(url: str, job_id: str, title: str = '', notes: str = '') -> dict | None:
     try:
         safe = _validate_url(url)
+        already = _existing_for_url(safe)
+        if already:
+            record = _remember_url(already, safe, notes)
+            _job(job_id, status='done', step='Already in the library', riff=record, skipped=True)
+            return record
+        _job(job_id, status='downloading', step='Checking the link')
+        probed = _dump_info(safe)
+        video_id = str(probed.get('id') or '')
+        if video_id:
+            already = _existing_for_url(safe, video_id)
+            if already:
+                record = _remember_url(already, safe, notes)
+                _job(job_id, status='done', step='Already in the library', riff=record, skipped=True)
+                return record
         _job(job_id, status='downloading', step='Downloading')
         scratch = LIBRARY / f'.tmp-{job_id}'
         if scratch.exists():
             shutil.rmtree(scratch)
         scratch.mkdir(parents=True)
         got = _download(safe, scratch)
-        info = got['info']
-        folder_id = _slug(str(info.get('id') or job_id))
+        info = got['info'] or probed
+        folder_id = _slug(str(info.get('id') or video_id or job_id))
         folder = LIBRARY / folder_id
-        if folder.exists():
-            shutil.rmtree(folder)
-        folder.mkdir(parents=True)
+        existing_path = folder / 'riff.json'
+        if existing_path.is_file():
+            shutil.rmtree(scratch, ignore_errors=True)
+            record = _remember_url(json.loads(existing_path.read_text()), safe, notes)
+            _job(job_id, status='done', step='Already in the library', riff=record, skipped=True)
+            return record
+        folder.mkdir(parents=True, exist_ok=True)
         _job(job_id, status='transcoding', step='Converting for Safari')
         _transcode(got['file'], folder / 'video.mp4')
         _job(job_id, status='reading', step='Tempo, key, and tab')
+        if title:
+            info = dict(info)
+            info['titleOverride'] = title
         record = _finalise(folder, folder / 'video.mp4', info, safe)
+        if notes and not (record.get('notes') or '').strip():
+            record['notes'] = notes
+            (folder / 'riff.json').write_text(json.dumps(record, indent=2))
         shutil.rmtree(scratch, ignore_errors=True)
         _job(job_id, status='done', step='Ready', riff=record)
+        return record
     except Exception as exc:  # noqa: BLE001 - surface to the UI
         _job(job_id, status='error', step='Failed', error=str(exc))
         traceback.print_exc()
+        return None
 
 
 def import_file(src: Path, meta: dict, job_id: str) -> None:
@@ -288,18 +393,108 @@ def import_file(src: Path, meta: dict, job_id: str) -> None:
         traceback.print_exc()
 
 
-def _list_riffs() -> list[dict]:
+def _decorate(record: dict, folder: Path) -> dict:
+    record = dict(record)
+    record.setdefault('videoId', folder.name)
+    record.setdefault('speed', 1)
+    record.setdefault('loopClip', True)
+    if not record.get('addedAt'):
+        stamp = (folder / 'riff.json').stat().st_mtime
+        record['addedAt'] = datetime.fromtimestamp(stamp, timezone.utc).isoformat()
+    if _ensure_poster(folder):
+        record['poster'] = f'/media/{folder.name}/poster.jpg'
+    return record
+
+
+def _summary(record: dict) -> dict:
+    return {
+        'id': record.get('id'),
+        'title': record.get('title') or 'Untitled riff',
+        'uploader': record.get('uploader') or '',
+        'bpm': record.get('bpm'),
+        'key': record.get('key') or '',
+        'addedAt': record.get('addedAt'),
+        'sourceUrl': record.get('sourceUrl') or '',
+        'notes': record.get('notes') or '',
+        'poster': record.get('poster'),
+        'duration': record.get('duration'),
+        'speed': record.get('speed') if record.get('speed') is not None else 1,
+    }
+
+
+def _list_riffs(summaries: bool = False) -> list[dict]:
     LIBRARY.mkdir(parents=True, exist_ok=True)
     found = []
-    for folder in sorted(LIBRARY.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+    folders = [folder for folder in LIBRARY.iterdir() if folder.is_dir() and not folder.name.startswith('.')]
+    folders.sort(key=lambda folder: (folder / 'riff.json').stat().st_mtime if (folder / 'riff.json').exists() else 0, reverse=True)
+    for folder in folders:
         path = folder / 'riff.json'
-        if folder.name.startswith('.') or not path.exists():
+        if not path.exists():
             continue
         try:
-            found.append(json.loads(path.read_text()))
+            record = _decorate(json.loads(path.read_text()), folder)
         except json.JSONDecodeError:
             continue
+        found.append(_summary(record) if summaries else record)
     return found
+
+
+def fetch_queue() -> dict:
+    """GitHub raw `riffs.json` on main, then the copy in this repo."""
+    error = ''
+    try:
+        request = urllib.request.Request(QUEUE_URL, headers={'User-Agent': 'practice-desk-riff-room'})
+        with urllib.request.urlopen(request, timeout=8) as response:
+            data = json.loads(response.read().decode())
+        return {'source': 'github', 'url': QUEUE_URL, 'entries': parse_queue(data), 'error': ''}
+    except Exception as exc:  # noqa: BLE001 - network, 404, and bad JSON all fall back
+        error = str(exc)
+    return {
+        'source': 'local',
+        'url': QUEUE_URL,
+        'entries': read_local_queue(),
+        'error': error,
+    }
+
+
+def sync_queue(job_id: str) -> None:
+    try:
+        queue = fetch_queue()
+        library = _list_riffs(summaries=False)
+        pending = pending_entries(queue['entries'], library)
+        total = len(pending)
+        label = 'GitHub' if queue['source'] == 'github' else 'the queue file in this repo'
+        if total == 0:
+            _job(job_id, status='done', step=f'Library is up to date ({label})',
+                 done=0, total=0, source=queue['source'], riffs=_list_riffs(summaries=True))
+            return
+        added = 0
+        skipped = 0
+        for index, entry in enumerate(pending):
+            name = entry.get('title') or entry['url']
+            _job(job_id, status='syncing', step=f'{index + 1} of {total} — {name}',
+                 done=index, total=total, source=queue['source'], current=name)
+            child = f'{job_id}-{index}'
+            import_url(entry['url'], child, title=entry.get('title') or '', notes=entry.get('notes') or '')
+            with LOCK:
+                outcome = JOBS.get(child) or {}
+            if outcome.get('skipped'):
+                skipped += 1
+            elif outcome.get('status') == 'done':
+                added += 1
+        if added:
+            step = f'Added {added} from {label}'
+            if skipped:
+                step += f', {skipped} already saved'
+        elif skipped:
+            step = f'Already in the library ({label})'
+        else:
+            step = f'Nothing new from {label}'
+        _job(job_id, status='done', step=step,
+             done=total, total=total, source=queue['source'], riffs=_list_riffs(summaries=True))
+    except Exception as exc:  # noqa: BLE001
+        _job(job_id, status='error', step='Sync failed', error=str(exc))
+        traceback.print_exc()
 
 
 def _read_riff(riff_id: str) -> dict | None:
@@ -315,10 +510,18 @@ def _write_riff(riff_id: str, patch: dict) -> dict | None:
     if not path.exists():
         return None
     record = json.loads(path.read_text())
-    allowed = ('title', 'uploader', 'bpm', 'key', 'notes', 'alphatex', 'downbeatOffset', 'loopA', 'loopB')
+    allowed = (
+        'title', 'uploader', 'bpm', 'key', 'notes', 'alphatex',
+        'downbeatOffset', 'loopA', 'loopB', 'speed', 'loopClip',
+    )
     for key in allowed:
         if key in patch:
             record[key] = patch[key]
+    if 'speed' in patch:
+        try:
+            record['speed'] = min(1, max(0.5, float(patch['speed'])))
+        except (TypeError, ValueError):
+            record['speed'] = 1
     if 'bpm' in patch:
         record['bpmSource'] = 'manual'
     if 'key' in patch:
@@ -383,7 +586,18 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, health())
             return
         if path == '/api/riffs':
-            self._json(200, {'riffs': _list_riffs()})
+            self._json(200, {'riffs': _list_riffs(summaries=True)})
+            return
+        if path == '/api/queue':
+            queue = fetch_queue()
+            library = _list_riffs(summaries=False)
+            self._json(200, {
+                'source': queue['source'],
+                'url': queue['url'],
+                'error': queue['error'],
+                'entries': queue['entries'],
+                'pending': [entry['url'] for entry in pending_entries(queue['entries'], library)],
+            })
             return
         if path.startswith('/api/jobs/'):
             job_id = path.rsplit('/', 1)[-1]
@@ -399,7 +613,8 @@ class Handler(BaseHTTPRequestHandler):
             if not record:
                 self._json(404, {'error': 'No riff with that id'})
                 return
-            self._json(200, record)
+            folder = LIBRARY / _slug(record.get('id') or '')
+            self._json(200, _decorate(record, folder) if folder.is_dir() else record)
             return
         if path.startswith('/media/'):
             self._media(path)
@@ -409,6 +624,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
         try:
+            if path == '/api/queue/sync':
+                job_id = uuid.uuid4().hex[:12]
+                _job(job_id, status='queued', step='Checking the song queue', done=0, total=0)
+                threading.Thread(target=sync_queue, args=(job_id,), daemon=True).start()
+                self._json(202, {'jobId': job_id})
+                return
             if path == '/api/riffs/import':
                 payload = json.loads(self._read_body().decode() or '{}')
                 url = _validate_url(payload.get('url') or '')
