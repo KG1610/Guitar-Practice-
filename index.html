@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/glory.css" />
     <link rel="stylesheet" href="/composer.css" />
+    <link rel="stylesheet" href="/riff-room.css" />
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -25,6 +26,10 @@
         <div class="brand">
           <p class="eyebrow">Practice Desk</p>
           <h1>Metal guitar</h1>
+          <div class="view-nav" role="tablist" aria-label="Practice views">
+            <button type="button" class="view-tab" data-view="desk" role="tab" aria-selected="true">Desk</button>
+            <button type="button" class="view-tab" data-view="riff" role="tab" aria-selected="false">Riff Room</button>
+          </div>
         </div>
         <div class="top-controls">
           <div class="mix" role="radiogroup" aria-label="Mix">
@@ -174,6 +179,7 @@
         <pre id="debug-log" class="debug-log"></pre>
       </section>
     </main>
+    <section id="riff-room" class="riff-room" aria-label="Riff Room"></section>
     <script type="module" src="/main.js"></script>
   </body>
 </html>

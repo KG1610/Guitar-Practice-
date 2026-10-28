@@ -4,11 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:desk": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@coderline/alphatab": "^1.8.4",
     "tone": "^15.1.22"
   },
   "devDependencies": {
