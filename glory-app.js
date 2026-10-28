@@ -10,6 +10,7 @@ import { toneSubdivision, stepsPerBar } from './glory-form.js';
 import { debugLog, debugError, debugHud, mountDebug } from './glory-debug.js';
 import { mountComposer } from './glory-composer.js';
 import { attachPatterns } from './glory-desk-patterns.js';
+import { deskApi } from './glory-bridge.js';
 
 export function boot() {
 
@@ -326,6 +327,7 @@ mixBtns.forEach((btn) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.code !== 'Space') return;
+  if (document.body.dataset.view === 'riff') return;
   const tag = document.activeElement?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   e.preventDefault();
@@ -376,5 +378,12 @@ mountComposer(document.getElementById('composer'), {
 });
 
 setStatus('Ready - space to play');
+
+deskApi.stop = () => {
+  if (state.playing || state.countingIn) stop();
+};
+deskApi.showFretboard = (next) => {
+  if (next && state.fretboardApi?.setState) state.fretboardApi.setState(next);
+};
 
 }
