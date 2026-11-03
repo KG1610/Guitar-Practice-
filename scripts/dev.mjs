@@ -34,7 +34,8 @@ const env = {
   PATH: `${process.env.HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:${process.env.PATH}`,
 };
 const helper = spawn(python, ['-m', 'server.riff_server'], { cwd: root, stdio: 'inherit', env });
-const vite = spawn('npx', ['vite', '--host', '127.0.0.1', '--port', '5173'], { cwd: root, stdio: 'inherit' });
+// host true (from vite.config) so localhost and port-forwarded remotes both work
+const vite = spawn('npx', ['vite', '--port', '5173'], { cwd: root, stdio: 'inherit' });
 
 function shutdown() {
   helper.kill('SIGTERM');

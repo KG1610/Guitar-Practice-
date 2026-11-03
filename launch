@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# One-click local Practice Desk + Riff Room helper.
+# Usage: ./launch
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [[ ! -d node_modules ]]; then
+  echo "Installing npm packages…"
+  npm install
+fi
+
+# Optional local tools for Riff Room downloads (desk still runs without them).
+command -v ffmpeg >/dev/null || echo "Note: ffmpeg not found — Riff Room downloads need it (brew install ffmpeg)."
+command -v yt-dlp >/dev/null || echo "Note: yt-dlp not found — Riff Room downloads need it (brew install yt-dlp)."
+
+echo "Starting Practice Desk → http://localhost:5173"
+exec npm start

@@ -4,17 +4,24 @@ Laptop-side drum/click desk for metal practice. Kit + click, 16th grid, count-in
 
 ## Run
 
-One command starts the desk and the local Riff Room helper:
+One click from the repo root:
 
 ```bash
-brew install ffmpeg yt-dlp   # once
-npm install
-npm run dev
+./launch
 ```
+
+That installs npm packages if needed, then starts the desk and the local Riff Room helper. First time on a Mac, also run:
+
+```bash
+brew install ffmpeg yt-dlp
+chmod +x launch   # once, if ./launch is not executable yet
+```
+
+Or the long form: `npm install` then `npm start` (same as `npm run dev`).
 
 Open `http://localhost:5173`. Headphones recommended. **Space** starts and stops whatever view you're in (Desk or Riff Room).
 
-`npm run dev` creates a Python virtualenv (or falls back to `pip install --user` if the machine has no `venv` module), installs the helper's packages, and launches Vite plus the helper on `127.0.0.1:8787`. The desk alone, with no downloader, is `npm run dev:desk`.
+`npm start` creates a Python virtualenv (or falls back to `pip install --user` if the machine has no `venv` module), installs the helper's packages, and launches Vite plus the helper on `127.0.0.1:8787`. The desk alone, with no downloader, is `npm run dev:desk`.
 
 ## Riff Room
 
