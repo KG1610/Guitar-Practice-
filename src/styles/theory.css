@@ -1,0 +1,229 @@
+/* Riff Room → Theory panel */
+.theory-panel { margin-top: 1rem; }
+.theory-panel h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+.theory-panel h4 {
+  margin: 1.1rem 0 0.5rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.theory-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.theory-toggles { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.theory-toggles button, #theory-jam, .theory-bar {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  border-radius: 10px;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+.theory-toggles button[aria-pressed="true"] {
+  background: var(--ember-dim);
+  color: var(--ember-2);
+  border-color: transparent;
+}
+
+.theory-neck {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.5rem;
+}
+.theory-neck-svg { display: block; min-width: 100%; height: auto; max-height: 220px; }
+.theory-neck-svg .fret { stroke: var(--line-strong); stroke-width: 1.5; }
+.theory-neck-svg .nut { stroke: var(--muted); stroke-width: 4; }
+.theory-neck-svg .string { stroke: #64748b; stroke-width: 1; }
+.theory-neck-svg text { font-family: var(--font); text-anchor: middle; }
+.theory-neck-svg .fret-num { fill: var(--muted); font-size: 11px; }
+.theory-neck-svg .fret-num.marked { fill: var(--text); font-weight: 700; }
+.theory-neck-svg .string-name { fill: var(--muted); font-size: 11px; }
+
+.theory-neck-svg .dot text { font-size: 10px; font-weight: 700; }
+.theory-neck-svg .ghost circle { fill: transparent; stroke: var(--line-strong); stroke-width: 1; }
+.theory-neck-svg .ghost text { fill: var(--muted); font-size: 8.5px; font-weight: 600; }
+.theory-neck-svg .ghost.root circle { stroke: var(--ember); stroke-opacity: 0.6; }
+
+.theory-neck-svg .lick circle { stroke-width: 2; }
+.theory-neck-svg .lick.root circle { fill: var(--ember); stroke: var(--ember-2); }
+.theory-neck-svg .lick.root text { fill: var(--ink); }
+.theory-neck-svg .lick.chord circle { fill: var(--gold); stroke: #fde68a; }
+.theory-neck-svg .lick.chord text { fill: #3b2a03; }
+.theory-neck-svg .lick.scale circle { fill: #cbd5e1; stroke: #f1f5f9; }
+.theory-neck-svg .lick.scale text { fill: #0f172a; }
+.theory-neck-svg .lick.outside circle { fill: #f87171; stroke: #fecaca; }
+.theory-neck-svg .lick.outside text { fill: #450a0a; }
+.theory-neck-svg .dot.lick text.bend { fill: var(--gold); font-size: 14px; font-weight: 800; }
+.theory-neck-svg .lick.dim { opacity: 0.28; }
+.theory-neck-svg .lick.now circle { stroke: #fff; stroke-width: 3; }
+
+.theory-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  align-items: center;
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.theory-legend .key {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  margin-right: -0.55rem;
+  vertical-align: -0.1rem;
+}
+.theory-legend .key.root { background: var(--ember); }
+.theory-legend .key.chord { background: var(--gold); }
+.theory-legend .key.scale { background: #cbd5e1; }
+.theory-legend .key.outside { background: #f87171; }
+.theory-legend .key.ghost { border: 1px solid var(--line-strong); }
+
+.theory-bars {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  margin-top: 0.8rem;
+  padding-bottom: 0.2rem;
+}
+.theory-bar {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  flex: 0 0 auto;
+  max-width: 16rem;
+}
+.theory-bar-num { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.theory-bar-degrees { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.8rem; white-space: normal; }
+.theory-bar.now { border-color: var(--ember); background: var(--ember-dim); }
+
+.theory-cols {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.25rem;
+}
+.theory-facts { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.45rem; line-height: 1.45; }
+.theory-concept {
+  align-self: start;
+  margin-top: 1rem;
+  padding: 0.2rem 1rem 1rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  line-height: 1.45;
+}
+.theory-formula {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: var(--ember-2);
+}
+#theory-jam { background: var(--ember); color: var(--ink); border: 0; }
+
+.theory-prompts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.6rem;
+  counter-reset: prompt;
+}
+.theory-prompts li {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+.theory-prompts li strong { color: var(--gold); font-size: 0.85rem; }
+
+@media (max-width: 800px) {
+  .theory-cols { grid-template-columns: 1fr; }
+  /* Keep labels readable on a phone; the neck scrolls sideways in its box. */
+  .theory-neck-svg { min-width: 560px; max-height: none; }
+}
+
+/* Bar-by-bar note chips and the fret fixer */
+.theory-fix-hint { margin-top: 0.8rem; }
+.theory-bar { cursor: default; }
+.theory-bar-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.theory-bar-loop {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  border-radius: 8px;
+  padding: 0.1rem 0.45rem;
+  cursor: pointer;
+}
+.theory-bar-loop:hover { color: var(--ember-2); border-color: var(--ember); }
+.theory-bar-notes { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; }
+.note-chip {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--text);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  border-radius: 7px;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+}
+.note-chip.chord { margin-left: -0.2rem; border-left-style: dotted; }
+.note-chip.outside { border-color: #f87171; color: #fecaca; }
+.note-chip.picked, .note-chip:hover { border-color: var(--ember); background: var(--ember-dim); color: var(--ember-2); }
+.theory-neck-svg .lick { cursor: pointer; }
+.theory-neck-svg .lick.picked circle { stroke: var(--ember-2); stroke-width: 4; }
+
+.theory-editor {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--ember);
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.theory-editor[hidden] { display: none; }
+.theory-edit-what { margin: 0; }
+.theory-edit-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.theory-edit-result { color: var(--ember-2); font-weight: 650; }
+.theory-editor button, #theory-undo {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+.theory-editor button.primary { background: var(--ember); color: var(--ink); border: 0; }
+.theory-undo-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.5rem 0 0; min-height: 1.2rem; }
+#theory-edit-all-label[hidden], #theory-undo[hidden] { display: none; }

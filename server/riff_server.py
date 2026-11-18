@@ -24,7 +24,9 @@ from urllib.parse import unquote, urlparse
 
 from server.analyze import analyse_audio
 from server.music import build_alphatex, clean_title, hints_from_text, tab_chroma
-from server.queue import known_keys, normalize_url, parse_queue, pending_entries, read_local_queue
+from server import stems
+from server.practice import clean_mix, clean_speed, clean_trainer
+from server.queue import known_keys, merge_queues, normalize_url, parse_queue, pending_entries, read_local_queue
 from server.tab_vision import process_video
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +69,8 @@ def health() -> dict:
         'ffmpeg': bool(_which('ffmpeg')),
         'ffprobe': bool(_which('ffprobe')),
         'ytdlp': bool(_which('yt-dlp')),
+        'stems': stems.available(),
+        'phoneUrls': [url for url in os.environ.get('PRACTICE_PHONE_URLS', '').split() if url],
         'library': str(LIBRARY),
     }
 
@@ -440,19 +444,25 @@ def _list_riffs(summaries: bool = False) -> list[dict]:
 
 
 def fetch_queue() -> dict:
-    """GitHub raw `riffs.json` on main, then the copy in this repo."""
+    """`riffs.json` on GitHub main plus the copy checked out here, merged.
+
+    Both count: links pushed to a branch are in the local copy before they
+    reach main, and links on main may be newer than this checkout.
+    """
+    remote: list[dict] = []
     error = ''
     try:
         request = urllib.request.Request(QUEUE_URL, headers={'User-Agent': 'practice-desk-riff-room'})
         with urllib.request.urlopen(request, timeout=8) as response:
-            data = json.loads(response.read().decode())
-        return {'source': 'github', 'url': QUEUE_URL, 'entries': parse_queue(data), 'error': ''}
+            remote = parse_queue(json.loads(response.read().decode()))
     except Exception as exc:  # noqa: BLE001 - network, 404, and bad JSON all fall back
         error = str(exc)
+    local = read_local_queue()
+    source = 'github+local' if remote and local else ('github' if remote else 'local')
     return {
-        'source': 'local',
+        'source': source,
         'url': QUEUE_URL,
-        'entries': read_local_queue(),
+        'entries': merge_queues(remote, local),
         'error': error,
     }
 
@@ -463,13 +473,14 @@ def sync_queue(job_id: str) -> None:
         library = _list_riffs(summaries=False)
         pending = pending_entries(queue['entries'], library)
         total = len(pending)
-        label = 'GitHub' if queue['source'] == 'github' else 'the queue file in this repo'
+        label = 'the song queue'
         if total == 0:
             _job(job_id, status='done', step=f'Library is up to date ({label})',
                  done=0, total=0, source=queue['source'], riffs=_list_riffs(summaries=True))
             return
         added = 0
         skipped = 0
+        failed = []
         for index, entry in enumerate(pending):
             name = entry.get('title') or entry['url']
             _job(job_id, status='syncing', step=f'{index + 1} of {total} — {name}',
@@ -482,6 +493,8 @@ def sync_queue(job_id: str) -> None:
                 skipped += 1
             elif outcome.get('status') == 'done':
                 added += 1
+            elif outcome.get('status') == 'error':
+                failed.append(name)
         if added:
             step = f'Added {added} from {label}'
             if skipped:
@@ -490,6 +503,9 @@ def sync_queue(job_id: str) -> None:
             step = f'Already in the library ({label})'
         else:
             step = f'Nothing new from {label}'
+        if failed:
+            names = ', '.join(failed[:2]) + (f' and {len(failed) - 2} more' if len(failed) > 2 else '')
+            step += f'. {len(failed)} could not be downloaded ({names}); see the helper log'
         _job(job_id, status='done', step=step,
              done=total, total=total, source=queue['source'], riffs=_list_riffs(summaries=True))
     except Exception as exc:  # noqa: BLE001
@@ -512,16 +528,17 @@ def _write_riff(riff_id: str, patch: dict) -> dict | None:
     record = json.loads(path.read_text())
     allowed = (
         'title', 'uploader', 'bpm', 'key', 'notes', 'alphatex',
-        'downbeatOffset', 'loopA', 'loopB', 'speed', 'loopClip',
+        'downbeatOffset', 'loopA', 'loopB', 'speed', 'loopClip', 'trainer', 'mix',
     )
     for key in allowed:
         if key in patch:
             record[key] = patch[key]
     if 'speed' in patch:
-        try:
-            record['speed'] = min(1, max(0.5, float(patch['speed'])))
-        except (TypeError, ValueError):
-            record['speed'] = 1
+        record['speed'] = clean_speed(patch['speed'])
+    if 'trainer' in patch:
+        record['trainer'] = clean_trainer(patch['trainer'])
+    if 'mix' in patch:
+        record['mix'] = clean_mix(patch['mix'])
     if 'bpm' in patch:
         record['bpmSource'] = 'manual'
     if 'key' in patch:
@@ -530,6 +547,31 @@ def _write_riff(riff_id: str, patch: dict) -> dict | None:
         (folder / 'tab.alphatex').write_text(patch['alphatex'])
     path.write_text(json.dumps(record, indent=2))
     return record
+
+
+SPLIT_LOCK = threading.Lock()
+
+
+def split_riff(riff_id: str, job_id: str) -> None:
+    """Background job: split the riff's audio into parts and save them."""
+    folder = LIBRARY / _slug(riff_id)
+    video = folder / 'video.mp4'
+    try:
+        if not video.exists():
+            raise ValueError('This riff has no video file to split.')
+        _job(job_id, status='running', step='Waiting for another split to finish')
+        with SPLIT_LOCK:
+            _job(job_id, status='running', step='Splitting into guitar, drums, bass and the rest (about a minute)…')
+            files = stems.split(video, folder / 'stems')
+        record = json.loads((folder / 'riff.json').read_text())
+        record['stems'] = {part: f'/media/{folder.name}/stems/{name}' for part, name in files.items()}
+        record['stemsModel'] = stems.MODEL_NAME
+        record.setdefault('mix', clean_mix(None))
+        (folder / 'riff.json').write_text(json.dumps(record, indent=2))
+        _job(job_id, status='done', step='Split into parts', riff=_decorate(record, folder))
+    except Exception as exc:  # noqa: BLE001
+        traceback.print_exc()
+        _job(job_id, status='error', error=f'Could not split the audio: {exc}')
 
 
 def _parse_multipart(body: bytes, content_type: str) -> dict:
@@ -638,6 +680,18 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=import_url, args=(url, job_id), daemon=True).start()
                 self._json(202, {'jobId': job_id})
                 return
+            if path.startswith('/api/riffs/') and path.endswith('/stems'):
+                if not stems.available():
+                    raise ValueError('Splitting is not installed yet. Run: npm run setup:stems')
+                riff_id = unquote(path.split('/')[3])
+                if not _read_riff(riff_id):
+                    self._json(404, {'error': 'No riff with that id'})
+                    return
+                job_id = uuid.uuid4().hex[:12]
+                _job(job_id, status='queued', step='Starting the split')
+                threading.Thread(target=split_riff, args=(riff_id, job_id), daemon=True).start()
+                self._json(202, {'jobId': job_id})
+                return
             if path == '/api/riffs/upload':
                 fields = _parse_multipart(self._read_body(), self.headers.get('Content-Type') or '')
                 upload = fields.get('file')
@@ -703,7 +757,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(404, {'error': 'Missing file'})
             return
         size = file_path.stat().st_size
-        ctype = 'video/mp4' if file_path.suffix == '.mp4' else 'image/jpeg'
+        ctype = {'.mp4': 'video/mp4', '.wav': 'audio/wav', '.png': 'image/png'}.get(file_path.suffix, 'image/jpeg')
         range_header = self.headers.get('Range')
         start, end = 0, size - 1
         status = 200

@@ -1,69 +1,12 @@
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+import { NOTE_NAMES as NOTES, SCALES } from './scales.js';
+
+export { SCALES };
 const MAX_FRET = 15;
 const LOW_E = 4;
 /** Low E → high e */
 const STRING_PCS = [4, 9, 2, 7, 11, 4];
 const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
 const MARKERS = new Set([3, 5, 7, 9, 12, 15]);
-
-export const SCALES = [
-  {
-    id: 'harmonic-minor',
-    name: 'Harmonic minor',
-    intervals: [0, 2, 3, 5, 7, 8, 11],
-    degrees: ['1', '2', 'b3', '4', '5', 'b6', '7'],
-    colorTone: 11,
-    hint: 'The 7 (amber) is the harmonic minor sound — lean into it.',
-  },
-  {
-    id: 'natural-minor',
-    name: 'Natural minor',
-    intervals: [0, 2, 3, 5, 7, 8, 10],
-    degrees: ['1', '2', 'b3', '4', '5', 'b6', 'b7'],
-    colorTone: 10,
-    hint: 'Aeolian. Softer than harmonic — b7 instead of the raised 7.',
-  },
-  {
-    id: 'melodic-minor',
-    name: 'Melodic minor',
-    intervals: [0, 2, 3, 5, 7, 9, 11],
-    degrees: ['1', '2', 'b3', '4', '5', '6', '7'],
-    colorTone: 9,
-    hint: 'Jazz / fusion minor. Raised 6 and 7 going up.',
-  },
-  {
-    id: 'minor-pentatonic',
-    name: 'Minor pentatonic',
-    intervals: [0, 3, 5, 7, 10],
-    degrees: ['1', 'b3', '4', '5', 'b7'],
-    colorTone: 3,
-    hint: 'The metal default box. Add the 7 later to taste the harmonic minor.',
-  },
-  {
-    id: 'phrygian',
-    name: 'Phrygian',
-    intervals: [0, 1, 3, 5, 7, 8, 10],
-    degrees: ['1', 'b2', 'b3', '4', '5', 'b6', 'b7'],
-    colorTone: 1,
-    hint: 'Spanish / dark metal. Gold is the b2.',
-  },
-  {
-    id: 'dorian',
-    name: 'Dorian',
-    intervals: [0, 2, 3, 5, 7, 9, 10],
-    degrees: ['1', '2', 'b3', '4', '5', '6', 'b7'],
-    colorTone: 9,
-    hint: 'Minor with a raised 6. Satriani / fusion friendly.',
-  },
-  {
-    id: 'major',
-    name: 'Major',
-    intervals: [0, 2, 4, 5, 7, 9, 11],
-    degrees: ['1', '2', '3', '4', '5', '6', '7'],
-    colorTone: 4,
-    hint: 'Ionian. Gold is the 3.',
-  },
-];
 
 const BOX_SPANS = [
   [-1, 3],

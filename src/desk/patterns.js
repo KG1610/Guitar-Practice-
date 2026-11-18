@@ -1,7 +1,7 @@
-import index from './patterns/index.json';
-import { readCustoms, deleteCustom } from './glory-composer.js';
-import { readFavs, isFav, toggleFav, removeFav } from './glory-favs.js';
-import { state } from './glory-state.js';
+import index from '../../patterns/index.json';
+import { readCustoms, deleteCustom } from './composer.js';
+import { readFavs, isFav, toggleFav, removeFav } from './favs.js';
+import { state } from './state.js';
 
 export function attachPatterns(api) {
   const {

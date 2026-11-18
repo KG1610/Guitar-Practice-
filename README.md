@@ -17,9 +17,27 @@ brew install ffmpeg yt-dlp
 chmod +x launch   # once, if ./launch is not executable yet
 ```
 
+To split riffs into guitar / drums / bass, run this once (about 1–2 GB for PyTorch and Demucs, plus a ~50 MB model):
+
+```bash
+./launch --stems      # or: npm run setup:stems
+```
+
 Or the long form: `npm install` then `npm start` (same as `npm run dev`).
 
-Open `http://localhost:5173`. Headphones recommended. **Space** starts and stops whatever view you're in (Desk or Riff Room).
+Open `http://localhost:5173`. Headphones recommended.
+
+### On your phone (through the amp)
+
+```bash
+./launch --phone
+```
+
+The terminal (and the app header on the Mac) shows an address like `http://192.168.1.20:5173`. Open it on the phone, on the same Wi-Fi, and plug the phone into the amp or pedal (for example the MG-300's aux in). Without `--phone` the app only listens on this Mac; with it, anyone on the same network can open it while it runs.
+
+On a phone the screen is rearranged for playing: in the Riff Room the title, Play, speed, the video and the parts mixer come first; on the Desk the composer and geometry wheel are hidden and Play is pinned to the bottom. The screen stays awake while something plays or a session runs. In Safari, Share → **Add to Home Screen** gives it an icon and opens it full screen.
+
+The Mac still does the work (downloads, splitting, tab reading); the phone plays. **Space** starts and stops whatever view you're in (Desk or Riff Room).
 
 `npm start` creates a Python virtualenv (or falls back to `pip install --user` if the machine has no `venv` module), installs the helper's packages, and launches Vite plus the helper on `127.0.0.1:8787`. The desk alone, with no downloader, is `npm run dev:desk`.
 
@@ -54,11 +72,42 @@ If that request fails (the file is not on `main` yet, or the machine is offline)
 ```
 
 `url` is required (Facebook, Instagram, or YouTube). `title`, `notes`, and `added` (`YYYY-MM-DD`) are optional. A bare array of those objects is accepted too. The queue currently starts with the A minor reel above.
-3. The player loops the whole clip or an A–B section. Speed is 50–100% with pitch preserved (`preservesPitch`). The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
-4. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
-5. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
+3. The player loops the whole clip, an A–B section, or a range of bars (**Bars 3 to 4 → Loop bars**, worked out from the riff's BPM and downbeat). Speed is 25–100% with pitch preserved (`preservesPitch`). **Count-in** plays one bar of clicks on the riff's grid at the current speed, before the first pass or before every loop.
 
-**Neck** jumps back to the fretboard in the printed key.
+   **Speed builder:** set a start speed, a step, how many loops per step, and a target (default 50% → +5% every 4 loops → 100%). It raises the speed at the loop point. **Missed it — slow down** drops one step and restarts the count. The speed and the builder settings are saved with the riff, so the next session picks up where you stopped.
+
+   The Songs list folds away once a riff is open; click **Songs** to get it back. Tempo, key and downbeat corrections sit under **Tempo, key and downbeat**.
+4. The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
+5. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
+6. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
+
+**Neck** jumps back to the fretboard in the detected scale.
+
+### Parts: fade the guitar out
+
+**Parts → Split guitar from drums** runs Demucs on this Mac (about 10 seconds for a 30-second reel on a recent laptop; it runs once per riff and the parts are saved in its folder as WAV). Then there are three faders, **Guitar**, **Drums** and **Bass**, and presets: **Full**, **Guitar 50%**, **No guitar**, **Drums only**. The mix is saved with the riff.
+
+"Guitar" is everything that is not drums or bass. Demucs often files distorted lead guitar under "other", and these reels are guitar over drums, so the guitar fader takes all of it (keys or vocals would come along too).
+
+The parts follow the video: slowdown keeps their pitch, loops and the count-in work the same, and drift is corrected by nudging each part's rate (they measure within a few milliseconds of the video). The video's own sound is muted while parts are loaded.
+
+With the speed builder on, **then fade the guitar out** drops the guitar a quarter every N loops once you reach the target speed, until it is just you and the drums.
+
+The **Practice kit** (the synth beat) is separate; switch it off if the real drums are enough.
+
+### Theory
+
+Under the tab, **Theory** reads the playable tab (through alphaTab's own parser, so pitches match what is drawn) and explains the lick in the riff's key:
+
+- **The lick on the neck.** High e on top, like the tab. Root, chord tones (1, b3, 5 in minor), other scale notes and notes outside the scale each get a colour; the rest of the scale is drawn faintly behind. Labels switch between **Degrees** and **Notes**. **Follow bar** lights up the bar that is playing. Bend arrows mark bent notes.
+- **Bar by bar.** The degrees of each bar (`4↗5` is a bend). Click a bar to loop it.
+- **What it's made of.** The simplest scale that covers at least 90% of the notes (minor pentatonic before blues before natural minor, and so on), which pentatonic box it sits in, outside notes and what they are doing (passing, bent into the scale, or colour) and which scale they come from, the degrees it leans on, where it starts and lands, and what its bends do.
+- **The scale card** with its formula in this key, and **Jam this scale on the Desk**, which sets the Desk fretboard to that scale, root and box.
+- **Make it yours.** Exercises built from this lick: change the last note, play the same idea in the next box, add one new note (the step to the next scale), move the bend, answer the first bar with your own.
+
+**Fix a misread fret.** Under the neck, every note is a chip (bar by bar). Click a chip or a note on the neck to hear it (plucked). If it does not match the video, pick the right string and fret: you hear the new note and see what it is (for example "→ C, the b3"). **Apply fix** rewrites just that note in the tab, keeping its bend or other effect, then the playable tab and the theory update and the riff is saved. **Change all N notes at this spot** fixes a repeated misread in one go. **Undo last fix** goes back (up to 20 fixes per riff while it is open). Red chips are outside the scale, so they are the first place to look.
+
+Change the key under **Tempo, key and downbeat** and the breakdown follows. The alphaTex box still works for anything the fixer cannot do (rhythm, adding or removing notes). With no key saved, it guesses one from the notes and says so.
 
 ### Test clip — what the reader got right
 
@@ -78,7 +127,20 @@ Den Kondrashev, "Easy A Minor Guitar Solo 80 bpm for practise + tabs", Facebook 
 
 The stitched image is the thing to trust while you correct the playable tab. Nothing from the reel is committed; `riffs-library/` stays on the machine.
 
-## Glory features
+## Practice session
+
+**Session** (next to Desk / Riff Room) plans a practice: **Warm-up → Riff → Theory → Jam** (5 / 15 / 5 / 10 min by default; switch blocks off or change minutes, saved in this browser). **Start session** and each block sets up the screen for you:
+
+- **Warm-up** loads a drill pattern and tempo on the Desk, with one exercise a day in rotation (chromatic 1-2-3-4, spider 1-3-2-4, pentatonic box in the riff's key saying the degrees, palm-muted chug, string skipping).
+- **Riff** opens the Riff Room on the riff you have open.
+- **Theory** scrolls to its breakdown and "Make it yours".
+- **Jam** sends the riff to the Desk: the scale and box the theory found, at the tempo you are practising at.
+
+A bar pinned to the bottom of the screen shows the block, the countdown and what to do, with **Pause**, **+1 min**, **Next** (or press **N**) and **End**. When time is up it chimes and lights **Next**; it never switches screens while you play. Finished sessions are logged in this browser (date, minutes actually played, riff); the planner shows the last one.
+
+**Jam this on the Desk** (Theory card, or **Neck**) works outside a session too.
+
+## Desk features
 
 - **Multi-bar forms** — patterns can define a `form` array of 4–8 bars; the player advances bar-by-bar then loops the whole form. Grid + playhead follow the current bar.
 - **Chorus lift / verse chug** — original multi-bar metalcore practice beds (inspired energy, not transcriptions).
@@ -171,4 +233,18 @@ Neck drills pulse matching notes from drum events while the kit/click runs.
 
 ## Stack
 
-Vite + Tone.js synth kit. No sample licenses.
+Vite + Tone.js synth kit. No sample licenses. Tests: `npm test` (front end, Vitest) and `python3 -m pytest server/tests` (helper). Tempo runs 30–250 BPM. Open the app with `?debug` to show the debug panel.
+
+## Code layout
+
+```
+index.html          page shell
+src/main.js         boots the Desk and the Riff Room
+src/desk/           drum desk: transport (app.js), step engine, forms, composer, presets, geometry, session
+src/audio/kit.js    the Tone.js kit shared by both views
+src/theory/         fretboard and scales
+src/riff/           Riff Room: player, drum sync, playable tab, key → fretboard
+src/styles/         CSS
+patterns/           drum pattern JSON
+server/             local Python helper (download, analysis, tab reading)
+```

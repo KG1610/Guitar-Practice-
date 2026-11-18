@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { createAudio } from './glory-audio.js';
+import { createAudio, createClick, playHat } from '../audio/kit.js';
 
 export const DRUM_PATTERNS = {
   rock: {
@@ -56,24 +56,55 @@ export function createRiffDrums() {
     if (DRUM_PATTERNS[id]) patternId = id;
   }
 
+  // Last time each voice was scheduled. Hits are scheduled slightly ahead of
+  // the video; after a loop jump the next hit can come out earlier than one
+  // already queued, which Tone's noise and metal voices reject. Drop those.
+  const lastAt = { click: -Infinity, kick: -Infinity, snare: -Infinity, hat: -Infinity };
+
+  function claim(voice, when) {
+    if (when <= lastAt[voice]) return false;
+    lastAt[voice] = when;
+    return true;
+  }
+
   function hit(step, when) {
     if (!enabled) return;
     const pattern = DRUM_PATTERNS[patternId];
     const index = ((step % pattern.steps) + pattern.steps) % pattern.steps;
     const beat = index % (pattern.steps / 4) === 0;
     if (pattern.clickOnly) {
-      audio.click.triggerAttackRelease(index === 0 ? 'C7' : 'G6', '32n', when, index === 0 ? 1 : 0.55);
+      if (claim('click', when)) audio.click.triggerAttackRelease(index === 0 ? 'C7' : 'G6', '32n', when, index === 0 ? 1 : 0.55);
       return;
     }
-    if (pattern.kick[index]) audio.kick.triggerAttackRelease('C1', '16n', when);
-    if (pattern.snare[index]) {
+    if (pattern.kick[index] && claim('kick', when)) audio.kick.triggerAttackRelease('C1', '16n', when);
+    if (pattern.snare[index] && claim('snare', when)) {
       audio.snareNoise.triggerAttackRelease('16n', when);
       audio.snareBody.triggerAttackRelease('G2', '32n', when);
     }
-    if (pattern.hat[index]) audio.hat.triggerAttackRelease('32n', when, undefined, beat ? 0.4 : 0.28);
+    if (pattern.hat[index] && claim('hat', when)) playHat(audio.hat, when, beat ? 0.4 : 0.28);
   }
 
-  return { setVolume, setEnabled, setPattern, hit, get patternId() { return patternId; } };
+  /**
+   * Schedule count-in clicks at audio-context times. Uses its own short-lived
+   * voice so cancel() silences clicks that are already scheduled. Plays even
+   * when the kit is switched off: the count-in is for the player, not the mix.
+   */
+  function countIn(clicks) {
+    const voice = createClick().toDestination();
+    for (const { time, accent } of clicks) {
+      voice.triggerAttackRelease(accent ? 'C7' : 'G6', '32n', time, accent ? 1 : 0.6);
+    }
+    const last = clicks.length ? clicks[clicks.length - 1].time : Tone.now();
+    const cleanup = window.setTimeout(() => voice.dispose(), Math.max(0, (last - Tone.now()) * 1000) + 500);
+    return {
+      cancel() {
+        window.clearTimeout(cleanup);
+        voice.dispose();
+      },
+    };
+  }
+
+  return { setVolume, setEnabled, setPattern, hit, countIn, get patternId() { return patternId; } };
 }
 
 /**

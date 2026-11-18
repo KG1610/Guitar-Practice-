@@ -44,7 +44,9 @@ function alphaTabFonts() {
 export default defineConfig({
   plugins: [alphaTabFonts()],
   server: {
-    host: true,
+    // Only this Mac by default. `./launch --phone` opens it to your Wi-Fi so a
+    // phone can connect (anyone on the same network could, too).
+    host: process.env.PRACTICE_PHONE === '1' ? true : 'localhost',
     port: 5173,
     proxy: {
       '/api': 'http://127.0.0.1:8787',

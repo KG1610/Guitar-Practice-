@@ -1,0 +1,102 @@
+/* Practice session: planner + running bar */
+.session-tab {
+  appearance: none;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.session-tab[aria-expanded="true"] { background: rgba(251, 191, 36, 0.14); }
+
+.session-panel {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+}
+.session-panel[hidden], .session-bar[hidden] { display: none; }
+.session-blocks {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+.session-block {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.session-block.off { opacity: 0.5; }
+.session-block-what { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+.session-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.8rem; }
+.session-panel button.primary, .session-bar button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 650;
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+}
+.session-panel button.primary { background: var(--gold); color: #3b2a03; border: 0; }
+.session-panel button.primary:disabled { opacity: 0.5; cursor: default; }
+
+.session-bar {
+  /* Pinned to the bottom of the screen in both views, so it is always in sight. */
+  position: fixed;
+  left: 50%;
+  bottom: 0.75rem;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100% - 1.5rem));
+  z-index: 50;
+  padding: 0.7rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+  background: rgba(18, 26, 43, 0.97);
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+body.in-session { padding-bottom: 9rem; }
+.session-bar-main { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; }
+.session-step { font-weight: 700; color: var(--gold); letter-spacing: 0.04em; }
+.session-clock { font-family: var(--display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.session-next { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
+.session-what { margin: 0; line-height: 1.45; font-size: 0.92rem; }
+.session-controls { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.session-bar button.primary { background: var(--gold); color: #3b2a03; border: 0; }
+.session-bar.time-up { border-color: var(--ember); animation: session-pulse 1.4s ease-in-out infinite; }
+.session-bar.time-up button.primary { background: var(--ember); color: var(--ink); }
+.session-bar.time-up .session-clock { color: var(--ember-2); }
+@keyframes session-pulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+  50% { box-shadow: 0 0 0 4px var(--ember-dim), 0 10px 30px rgba(0, 0, 0, 0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .session-bar.time-up { animation: none; }
+}
+
+.phone-url { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.8rem; font-family: "JetBrains Mono", ui-monospace, monospace; }
+.phone-url[hidden] { display: none; }
+/* Room for the iPhone home indicator when launched from the home screen. */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .session-bar { bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+  .desk { padding-top: max(1.75rem, env(safe-area-inset-top)); }
+}

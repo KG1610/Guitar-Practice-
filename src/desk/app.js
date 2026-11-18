@@ -1,20 +1,24 @@
 import * as Tone from 'tone';
-import index from './patterns/index.json';
-import { mountFretboard } from './fretboard.js';
-import { createAudio } from './glory-audio.js';
-import { readSession, writeSession } from './glory-session.js';
-import { state } from './glory-state.js';
-import { createEngine } from './glory-engine.js';
-import { mountGeometry } from './glory-geometry.js';
-import { toneSubdivision, stepsPerBar } from './glory-form.js';
-import { debugLog, debugError, debugHud, mountDebug } from './glory-debug.js';
-import { mountComposer } from './glory-composer.js';
-import { attachPatterns } from './glory-desk-patterns.js';
-import { deskApi } from './glory-bridge.js';
+import index from '../../patterns/index.json';
+import { mountFretboard } from '../theory/fretboard.js';
+import { createAudio } from '../audio/kit.js';
+import { readSession, writeSession } from './session.js';
+import { state } from './state.js';
+import { createEngine } from './engine.js';
+import { mountGeometry } from './geometry.js';
+import { toneSubdivision, stepsPerBar } from './form.js';
+import { debugLog, debugError, debugHud, mountDebug } from './debug.js';
+import { mountComposer } from './composer.js';
+import { attachPatterns } from './patterns.js';
+import { deskApi } from '../bridge.js';
+import { keepAwake } from '../device.js';
+
+const BPM_MIN = 30;
+const BPM_MAX = 250;
 
 export function boot() {
 
-const modules = import.meta.glob('./patterns/*.json', { eager: true, import: 'default' });
+const modules = import.meta.glob('../../patterns/*.json', { eager: true, import: 'default' });
 const catalog = {};
 for (const data of Object.values(modules)) {
   if (data && !Array.isArray(data) && data.id) catalog[data.id] = data;
@@ -63,7 +67,7 @@ const engine = createEngine(
 Tone.getDestination().volume.value = Number(volumeInput.value);
 
 function setBpm(bpm) {
-  const n = Math.max(50, Math.min(180, Number(bpm) || 90));
+  const n = Math.max(BPM_MIN, Math.min(BPM_MAX, Number(bpm) || 90));
   Tone.getTransport().bpm.value = n;
   bpmInput.value = String(Math.round(n));
   bpmValue.textContent = String(Math.round(n));
@@ -120,50 +124,25 @@ function ensureLoop() {
   let loadPatternById;
 
 let playToken = 0;
-let countInFinish = null;
+const COUNT_IN_BEATS = 4;
 
-function finishCountIn() {
-  if (!countInFinish) return;
-  const done = countInFinish;
-  countInFinish = null;
-  done();
-}
-
-async function countIn(token) {
-  state.countingIn = true;
-  setStatus('Count-in');
-  debugLog('count-in');
-  const beats = 4;
-  await new Promise((resolve) => {
-    countInFinish = resolve;
-    let i = 0;
-    const counter = new Tone.Loop((time) => {
-      if (token !== playToken) {
-        counter.stop(time);
-        counter.dispose();
-        finishCountIn();
-        return;
-      }
+/**
+ * Put the count-in clicks on the same transport timeline as the groove, one
+ * per beat of a lead-in bar, so beat 1 of the pattern lands exactly one beat
+ * after the last click. Returns the transport position the groove starts at.
+ */
+function scheduleCountIn() {
+  const transport = Tone.getTransport();
+  for (let i = 0; i < COUNT_IN_BEATS; i += 1) {
+    transport.scheduleOnce((time) => {
       engine.triggerClick(time, i === 0 ? 0 : 1, i === 0 ? 1 : 0.55, { force: true });
-      const beat = i;
       Tone.getDraw().schedule(() => {
-        engine.highlight(Math.floor((beat / 4) * (state.pattern?.stepsPerBar ?? 16)));
-        setStatus(`Count-in ${beat + 1}`);
+        engine.highlight(Math.floor((i / COUNT_IN_BEATS) * stepsPerBar()));
+        setStatus(`Count-in ${i + 1}`);
       }, time);
-      i += 1;
-      if (i >= beats) {
-        counter.stop(time);
-        Tone.getDraw().schedule(() => {
-          counter.dispose();
-          finishCountIn();
-        }, time);
-      }
-    }, '4n');
-    counter.start(0);
-    Tone.getTransport().start();
-    setTimeout(() => finishCountIn(), 8000);
-  });
-  state.countingIn = false;
+    }, `0:${i}:0`);
+  }
+  return '1:0:0';
 }
 
 async function start({ skipCountIn = false } = {}) {
@@ -181,23 +160,35 @@ async function start({ skipCountIn = false } = {}) {
     state.barsSinceRamp = 0;
     engine.refreshFormUi();
     state.playing = true;
+    keepAwake('desk', true);
     playBtn.textContent = 'Stop';
     playBtn.setAttribute('aria-pressed', 'true');
     stageEl.classList.add('is-playing');
 
-    Tone.getTransport().stop();
-    Tone.getTransport().position = 0;
+    const transport = Tone.getTransport();
+    transport.stop();
+    transport.cancel();
+    transport.position = 0;
+
+    let startAt = 0;
     if (countInEl.checked && !skipCountIn) {
-      await countIn(token);
-      if (token !== playToken || !state.playing) return;
-      Tone.getTransport().stop();
-      Tone.getTransport().position = 0;
+      state.countingIn = true;
+      setStatus('Count-in');
+      debugLog('count-in');
+      startAt = scheduleCountIn();
     }
 
     ensureLoop();
-    state.loop.start(0);
-    Tone.getTransport().start();
-    setStatus('Playing - space to stop');
+    state.loop.start(startAt);
+    transport.scheduleOnce((time) => {
+      Tone.getDraw().schedule(() => {
+        if (token !== playToken) return;
+        state.countingIn = false;
+        setStatus('Playing - space to stop');
+      }, time);
+    }, startAt);
+    transport.start();
+    if (!state.countingIn) setStatus('Playing - space to stop');
     debugLog('start ok', { bpm: bpmInput.value, pattern: state.currentId, skipCountIn });
   } catch (err) {
     debugError('start', err);
@@ -209,7 +200,6 @@ async function start({ skipCountIn = false } = {}) {
 function stop() {
   debugLog('stop');
   playToken += 1;
-  finishCountIn();
   Tone.getTransport().stop();
   Tone.getTransport().cancel();
   if (state.loop) {
@@ -219,6 +209,7 @@ function stop() {
   }
   state.playing = false;
   state.countingIn = false;
+  keepAwake('desk', false);
   playBtn.textContent = 'Play';
   playBtn.setAttribute('aria-pressed', 'false');
   stageEl.classList.remove('is-playing');
@@ -384,6 +375,18 @@ deskApi.stop = () => {
 };
 deskApi.showFretboard = (next) => {
   if (next && state.fretboardApi?.setState) state.fretboardApi.setState(next);
+};
+deskApi.jam = ({ rootPc, scaleId, patternId, bpm, label } = {}) => {
+  if (state.playing || state.countingIn) stop();
+  if (state.fretboardApi?.setState) state.fretboardApi.setState({ rootPc, scaleId, patternId });
+  if (bpm) setBpm(bpm);
+  setStatus(label ? `${label} - space to play` : 'Ready - space to play');
+};
+deskApi.loadPattern = ({ patternId, bpm, label } = {}) => {
+  if (state.playing || state.countingIn) stop();
+  if (patternId && resolvePattern(patternId)) loadPatternById(patternId, { applyDefaultBpm: !bpm });
+  if (bpm) setBpm(bpm);
+  if (label) setStatus(`${label} - space to play`);
 };
 
 }
