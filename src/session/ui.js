@@ -6,6 +6,7 @@
  */
 import * as Tone from 'tone';
 import { deskApi, riffApi } from '../bridge.js';
+import { keepAwake } from '../device.js';
 import { parseKey, pcName } from '../theory/scales.js';
 import {
   BLOCKS, addMinute, cleanPlan, formatClock, isPaused, nextBlock, pauseSession, planMinutes,
@@ -199,6 +200,7 @@ export function mountSession(root, toggle) {
     toggle.setAttribute('aria-expanded', 'false');
     q('#session-bar').hidden = false;
     document.body.classList.add('in-session');
+    keepAwake('session', true);
     enter(session.blocks[0].id);
     window.clearInterval(timer);
     timer = window.setInterval(tick, 250);
@@ -230,6 +232,7 @@ export function mountSession(root, toggle) {
     session = null;
     q('#session-bar').hidden = true;
     document.body.classList.remove('in-session');
+    keepAwake('session', false);
     const status = document.getElementById('status');
     if (status && !early) status.textContent = `Session done: ${minutes} min. Nice work.`;
     chime([76, 81, 88]);

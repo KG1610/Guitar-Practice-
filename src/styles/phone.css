@@ -1,0 +1,60 @@
+/*
+ * Phone layout (playing from the phone through the amp): the things you touch
+ * mid-practice come first and are big enough for a thumb.
+ */
+@media (max-width: 700px) {
+  /* Compact header */
+  .brand .eyebrow { display: none; }
+  .brand h1 { font-size: 1.25rem; }
+  .view-nav { margin-top: 0.45rem; }
+  .top { gap: 0.6rem; }
+  .riff-head { margin-top: 0.4rem; }
+  .riff-head h2 { font-size: 1.45rem; }
+  .riff-head .eyebrow { display: none; }
+
+  /* Desk: no composer or geometry wheel on a phone; Play pinned to the screen. */
+  .composer-panel, .geo-panel { display: none; }
+  .transport .play {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 1.5rem);
+    z-index: 40;
+    height: 58px;
+  }
+  body[data-view="desk"] { padding-bottom: 5rem; }
+  body[data-view="riff"] .transport .play { display: none; }
+  body.in-session .transport .play { bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)); }
+  body.in-session[data-view="desk"] { padding-bottom: 15rem; }
+
+  /* Riff Room: title, play, speed, video, parts first; the rest below. */
+  .riff-head { margin-top: 0.2rem; }
+  .riff-rename, .riff-by { display: none; }
+  .riff-stage { display: flex; flex-direction: column; align-items: stretch; gap: 0.6rem; }
+  .riff-side { display: contents; }
+  .riff-side > * { order: 5; }
+  .riff-side > .riff-transport { order: 1; }
+  .riff-side > .riff-slider:has(#riff-speed) { order: 2; }
+  .riff-video-wrap { order: 3; display: flex; justify-content: center; }
+  .riff-side > .riff-mix { order: 4; }
+  #riff-video { max-height: 40vh; width: auto; max-width: 100%; margin: 0 auto; }
+  .riff-video-wrap { align-self: center; }
+  .riff-side > .riff-slider:has(#riff-speed) input { width: 100%; }
+  .riff-transport .play { min-width: 92px; }
+
+  /* Thumb-sized targets */
+  .riff-ab button, .riff-bars button, .riff-mix-presets button, .riff-drum-picks button,
+  #riff-loop, #riff-backoff, .theory-toggles button, .session-bar button, .note-chip {
+    min-height: 44px;
+  }
+  .note-chip { min-width: 40px; }
+  input[type="range"] { min-height: 32px; }
+  .riff-inline input, .riff-inline select { min-height: 40px; }
+
+  /* Session bar: tighter */
+  .session-bar { padding: 0.55rem 0.7rem; gap: 0.25rem; }
+  .session-clock { font-size: 1.35rem; }
+  .session-what { font-size: 0.85rem; max-height: 3.6em; overflow: hidden; }
+  .session-next { margin-left: 0; width: 100%; }
+}

@@ -8,6 +8,7 @@ import {
 } from './trainer.js';
 import { mountTheoryPanel, theoryPanelHtml } from './theory-panel.js';
 import { PARTS, createStemPlayer } from './stems.js';
+import { keepAwake, primeMedia } from '../device.js';
 import { BEATS_PER_BAR, barStart, beatSeconds, countInBeats, loopRegion } from './timing.js';
 
 const KEYS = [
@@ -342,6 +343,8 @@ export function mountRiffRoom(root) {
   });
 
   video.addEventListener('play', async () => {
+    if (video.paused) return; // iOS priming (see togglePlay)
+    keepAwake('riff', true);
     await Tone.start();
     deskApi.stop();
     sync.configure({ bpm: riffBpm(), offset: riffOffset() });
@@ -351,6 +354,7 @@ export function mountRiffRoom(root) {
     paintPlayButton();
   });
   video.addEventListener('pause', () => {
+    keepAwake('riff', false);
     sync.stop();
     cancelAnimationFrame(state.loopRaf);
     state.loopRaf = 0;
@@ -583,6 +587,11 @@ export function mountRiffRoom(root) {
 
   async function togglePlay() {
     if (!state.riff) return;
+    // iOS: unlock the video and the parts inside this tap, before any await,
+    // so the video can start after a count-in. Priming's play event arrives
+    // when the video is already paused again, so the handler skips it.
+    stems.unlock();
+    if (video.paused && !state.countIn) primeMedia(video);
     if (state.countIn) {
       cancelCountIn();
     } else if (video.paused) {
@@ -657,6 +666,7 @@ export function mountRiffRoom(root) {
     } catch {
       state.helperUp = false;
       q('#riff-helper').hidden = false;
+      q('#riff-library').open = true;
       state.library = [];
     }
     renderPicker(selectId || state.riff?.id);
@@ -906,6 +916,12 @@ export function mountRiffRoom(root) {
       if (!body.ffmpeg) missing.push('ffmpeg');
       if (!body.ytdlp) missing.push('yt-dlp');
       state.canSplit = Boolean(body.stems);
+      const phone = (body.phoneUrls || [])[0];
+      const phoneEl = document.getElementById('phone-url');
+      if (phone && phoneEl && !matchMedia('(max-width: 700px)').matches) {
+        phoneEl.textContent = `On your phone (same Wi-Fi): ${phone}`;
+        phoneEl.hidden = false;
+      }
       if (missing.length) {
         state.toolsMissing = true;
         q('#riff-helper').hidden = false;
@@ -916,7 +932,8 @@ export function mountRiffRoom(root) {
     }
     await refreshList();
     if (state.library[0]) await openRiffById(state.library[0].id);
-    if (state.helperUp) syncQueue();
+    // Sync downloads links, which needs yt-dlp and ffmpeg.
+    if (state.helperUp && !state.toolsMissing) syncQueue();
   }
 
   boot();
@@ -959,13 +976,13 @@ function template() {
       </div>
       <p class="riff-status" id="riff-status">Paste a Facebook, Instagram, or YouTube link.</p>
     </div>
-    <p class="riff-helper" id="riff-helper" hidden>The local helper is not running. Start the app with <code>./launch</code>.</p>
     <details class="riff-library" id="riff-library" open>
       <summary>
         <span class="grid-title">Songs</span>
         <span id="riff-count" class="riff-count">Loading…</span>
         <span class="riff-library-hint">Import, search, pick</span>
       </summary>
+      <p class="riff-helper" id="riff-helper" hidden>The local helper is not running. Start the app with <code>./launch</code>.</p>
       <form class="riff-import" onsubmit="return false">
         <label class="riff-url">
           <span class="sr">Video link</span>

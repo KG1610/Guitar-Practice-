@@ -92,3 +92,11 @@ body.in-session { padding-bottom: 9rem; }
 @media (prefers-reduced-motion: reduce) {
   .session-bar.time-up { animation: none; }
 }
+
+.phone-url { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.8rem; font-family: "JetBrains Mono", ui-monospace, monospace; }
+.phone-url[hidden] { display: none; }
+/* Room for the iPhone home indicator when launched from the home screen. */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .session-bar { bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+  .desk { padding-top: max(1.75rem, env(safe-area-inset-top)); }
+}

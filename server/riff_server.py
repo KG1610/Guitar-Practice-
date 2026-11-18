@@ -70,6 +70,7 @@ def health() -> dict:
         'ffprobe': bool(_which('ffprobe')),
         'ytdlp': bool(_which('yt-dlp')),
         'stems': stems.available(),
+        'phoneUrls': [url for url in os.environ.get('PRACTICE_PHONE_URLS', '').split() if url],
         'library': str(LIBRARY),
     }
 
@@ -503,7 +504,8 @@ def sync_queue(job_id: str) -> None:
         else:
             step = f'Nothing new from {label}'
         if failed:
-            step += f'. {len(failed)} could not be downloaded: {", ".join(failed)}'
+            names = ', '.join(failed[:2]) + (f' and {len(failed) - 2} more' if len(failed) > 2 else '')
+            step += f'. {len(failed)} could not be downloaded ({names}); see the helper log'
         _job(job_id, status='done', step=step,
              done=total, total=total, source=queue['source'], riffs=_list_riffs(summaries=True))
     except Exception as exc:  # noqa: BLE001

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,14 +29,32 @@ async function ensurePython() {
   }
 }
 
+const phone = process.argv.includes('--phone') || process.env.PRACTICE_PHONE === '1';
+
+/** Wi-Fi / Ethernet addresses a phone on the same network can reach. */
+function lanUrls(port) {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((net) => net && net.family === 'IPv4' && !net.internal)
+    .map((net) => `http://${net.address}:${port}`);
+}
+
 const python = await ensurePython();
+const phoneUrls = phone ? lanUrls(5173) : [];
 const env = {
   ...process.env,
+  PRACTICE_PHONE: phone ? '1' : '',
+  PRACTICE_PHONE_URLS: phoneUrls.join(' '),
   PATH: `${process.env.HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:${process.env.PATH}`,
 };
 const helper = spawn(python, ['-m', 'server.riff_server'], { cwd: root, stdio: 'inherit', env });
-// host true (from vite.config) so localhost and port-forwarded remotes both work
-const vite = spawn('npx', ['vite', '--port', '5173'], { cwd: root, stdio: 'inherit' });
+const vite = spawn('npx', ['vite', '--port', '5173', '--strictPort'], { cwd: root, stdio: 'inherit', env });
+if (phone) {
+  console.log('\n[phone] On your phone (same Wi-Fi), open:');
+  for (const url of phoneUrls) console.log(`[phone]   ${url}`);
+  if (!phoneUrls.length) console.log('[phone]   (no network address found: is Wi-Fi on?)');
+  console.log('[phone] Anyone on this network can open it while it runs.\n');
+}
 
 function shutdown() {
   helper.kill('SIGTERM');

@@ -4,9 +4,16 @@
  * The video stays the clock: loops, count-in, the kit and the tab all read
  * video.currentTime. Each part is an <audio> element (so slowdown keeps its
  * pitch, like the video) routed through Web Audio for volume, because iOS
- * ignores element.volume. Small drift is corrected by nudging the part's
- * playback rate; big jumps (loops, seeks) by seeking.
+ * ignores element.volume. Small drift is corrected by nudging the parts'
+ * playback rate, all by the same amount so they never spread apart; big
+ * jumps (loops, seeks) by seeking.
+ *
+ * video.currentTime only moves once per frame, so the drift reading is noisy;
+ * it is smoothed, and the rate is adjusted a few times a second, not every
+ * frame.
  */
+
+import { primeMedia } from '../device.js';
 
 export const PARTS = ['guitar', 'drums', 'bass'];
 
@@ -16,6 +23,12 @@ const SEEK_DRIFT = 0.25;
 const NUDGE_DRIFT = 0.005;
 /** Largest rate nudge, as a fraction of the playback rate. */
 const MAX_NUDGE = 0.04;
+/** How often the rate is adjusted (ms). */
+const ADJUST_EVERY = 250;
+/** If the parts themselves spread this far apart, line them all up again (s). */
+const SPREAD_LIMIT = 0.03;
+/** Smoothing for the drift reading (share of each new sample). */
+const SMOOTHING = 0.15;
 
 /** Rate multiplier that pulls a part back toward the video. Pure, for tests. */
 export function nudgeFor(drift) {
@@ -29,6 +42,8 @@ export function createStemPlayer(video) {
   let tracks = []; // { part, el, gain }
   let volumes = { guitar: 1, drums: 1, bass: 1 };
   let raf = 0;
+  let smoothDrift = 0;
+  let lastAdjust = 0;
 
   function audioContext() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -97,6 +112,7 @@ export function createStemPlayer(video) {
     if (!active()) return;
     await audioContext().resume();
     seek();
+    smoothDrift = 0;
     each((t) => {
       t.el.playbackRate = video.playbackRate;
       t.el.play().catch(() => {});
@@ -110,31 +126,50 @@ export function createStemPlayer(video) {
     each((t) => t.el.pause());
   }
 
-  function follow() {
+  function follow(now = performance.now()) {
     raf = 0;
     if (!active() || video.paused) return;
     const rate = video.playbackRate || 1;
-    each((t) => {
-      if (t.el.paused || t.el.seeking) return;
-      const drift = t.el.currentTime - video.currentTime;
-      if (Math.abs(drift) > SEEK_DRIFT) {
-        t.el.currentTime = video.currentTime;
-        t.el.playbackRate = rate;
+    const live = tracks.filter((t) => !t.el.paused && !t.el.seeking);
+    if (live.length) {
+      const times = live.map((t) => t.el.currentTime);
+      const mean = times.reduce((a, b) => a + b, 0) / times.length;
+      const drift = mean - video.currentTime;
+      const spread = Math.max(...times) - Math.min(...times);
+      if (Math.abs(drift) > SEEK_DRIFT || spread > SPREAD_LIMIT) {
+        seek();
+        each((t) => { t.el.playbackRate = rate; });
+        smoothDrift = 0;
+        lastAdjust = now;
       } else {
-        t.el.playbackRate = rate * nudgeFor(drift);
+        smoothDrift += (drift - smoothDrift) * SMOOTHING;
+        if (now - lastAdjust >= ADJUST_EVERY) {
+          lastAdjust = now;
+          const next = rate * nudgeFor(smoothDrift);
+          each((t) => { t.el.playbackRate = next; });
+        }
       }
-    });
+    }
     raf = requestAnimationFrame(follow);
   }
 
-  video.addEventListener('play', play);
+  // Ignore the instant play/pause pair iOS priming makes (see device.js).
+  video.addEventListener('play', () => { if (!video.paused) play(); });
   video.addEventListener('pause', pause);
   video.addEventListener('seeking', () => { if (active()) seek(); });
   video.addEventListener('ratechange', () => each((t) => { t.el.playbackRate = video.playbackRate; }));
 
+  /** Call from a tap, before any await: lets the parts start later on iOS. */
+  function unlock() {
+    if (!active()) return;
+    audioContext().resume().catch(() => {});
+    each((t) => primeMedia(t.el));
+  }
+
   return {
     load,
     unload,
+    unlock,
     get active() { return active(); },
     get volumes() { return { ...volumes }; },
     setVolume(part, value) {

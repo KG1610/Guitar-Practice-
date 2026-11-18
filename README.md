@@ -25,7 +25,19 @@ To split riffs into guitar / drums / bass, run this once (about 1–2 GB for PyT
 
 Or the long form: `npm install` then `npm start` (same as `npm run dev`).
 
-Open `http://localhost:5173`. Headphones recommended. **Space** starts and stops whatever view you're in (Desk or Riff Room).
+Open `http://localhost:5173`. Headphones recommended.
+
+### On your phone (through the amp)
+
+```bash
+./launch --phone
+```
+
+The terminal (and the app header on the Mac) shows an address like `http://192.168.1.20:5173`. Open it on the phone, on the same Wi-Fi, and plug the phone into the amp or pedal (for example the MG-300's aux in). Without `--phone` the app only listens on this Mac; with it, anyone on the same network can open it while it runs.
+
+On a phone the screen is rearranged for playing: in the Riff Room the title, Play, speed, the video and the parts mixer come first; on the Desk the composer and geometry wheel are hidden and Play is pinned to the bottom. The screen stays awake while something plays or a session runs. In Safari, Share → **Add to Home Screen** gives it an icon and opens it full screen.
+
+The Mac still does the work (downloads, splitting, tab reading); the phone plays. **Space** starts and stops whatever view you're in (Desk or Riff Room).
 
 `npm start` creates a Python virtualenv (or falls back to `pip install --user` if the machine has no `venv` module), installs the helper's packages, and launches Vite plus the helper on `127.0.0.1:8787`. The desk alone, with no downloader, is `npm run dev:desk`.
 

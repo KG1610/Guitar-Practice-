@@ -11,6 +11,7 @@ import { debugLog, debugError, debugHud, mountDebug } from './debug.js';
 import { mountComposer } from './composer.js';
 import { attachPatterns } from './patterns.js';
 import { deskApi } from '../bridge.js';
+import { keepAwake } from '../device.js';
 
 const BPM_MIN = 30;
 const BPM_MAX = 250;
@@ -159,6 +160,7 @@ async function start({ skipCountIn = false } = {}) {
     state.barsSinceRamp = 0;
     engine.refreshFormUi();
     state.playing = true;
+    keepAwake('desk', true);
     playBtn.textContent = 'Stop';
     playBtn.setAttribute('aria-pressed', 'true');
     stageEl.classList.add('is-playing');
@@ -207,6 +209,7 @@ function stop() {
   }
   state.playing = false;
   state.countingIn = false;
+  keepAwake('desk', false);
   playBtn.textContent = 'Play';
   playBtn.setAttribute('aria-pressed', 'false');
   stageEl.classList.remove('is-playing');

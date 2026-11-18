@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
 # One-click local Practice Desk + Riff Room helper.
-# Usage: ./launch            (add --stems once to install audio splitting)
+# Usage: ./launch               this Mac only
+#        ./launch --phone       also open it to your phone on the same Wi-Fi
+#        ./launch --stems       install audio splitting first (one time)
 set -euo pipefail
 cd "$(dirname "$0")"
+
+phone=""
+for arg in "$@"; do
+  case "$arg" in
+    --stems) stems=1 ;;
+    --phone) phone="--phone" ;;
+    *) echo "Unknown option: $arg (use --phone and/or --stems)"; exit 1 ;;
+  esac
+done
 
 if [[ ! -d node_modules ]]; then
   echo "Installing npm packages…"
   npm install
 fi
 
-if [[ "${1:-}" == "--stems" ]]; then
+if [[ -n "${stems:-}" ]]; then
   echo "Setting up audio splitting (one time)…"
   npm run setup:stems
 fi
@@ -19,4 +30,4 @@ command -v ffmpeg >/dev/null || echo "Note: ffmpeg not found — Riff Room downl
 command -v yt-dlp >/dev/null || echo "Note: yt-dlp not found — Riff Room downloads need it (brew install yt-dlp)."
 
 echo "Starting Practice Desk → http://localhost:5173"
-exec npm start
+exec node scripts/dev.mjs $phone
