@@ -15,7 +15,9 @@ for arg in "$@"; do
   esac
 done
 
-if [[ ! -d node_modules ]]; then
+# Install (or update) JavaScript packages when they are missing or when
+# package-lock.json changed since the last install (for example after git pull).
+if [[ ! -f node_modules/.package-lock.json || package-lock.json -nt node_modules/.package-lock.json ]]; then
   echo "Installing npm packages…"
   npm install
 fi
