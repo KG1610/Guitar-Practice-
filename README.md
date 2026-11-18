@@ -63,7 +63,19 @@ If that request fails (the file is not on `main` yet, or the machine is offline)
 5. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
 6. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
 
-**Neck** jumps back to the fretboard in the printed key.
+**Neck** jumps back to the fretboard in the detected scale.
+
+### Theory
+
+Under the tab, **Theory** reads the playable tab (through alphaTab's own parser, so pitches match what is drawn) and explains the lick in the riff's key:
+
+- **The lick on the neck.** High e on top, like the tab. Root, chord tones (1, b3, 5 in minor), other scale notes and notes outside the scale each get a colour; the rest of the scale is drawn faintly behind. Labels switch between **Degrees** and **Notes**. **Follow bar** lights up the bar that is playing. Bend arrows mark bent notes.
+- **Bar by bar.** The degrees of each bar (`4↗5` is a bend). Click a bar to loop it.
+- **What it's made of.** The simplest scale that covers at least 90% of the notes (minor pentatonic before blues before natural minor, and so on), which pentatonic box it sits in, outside notes and what they are doing (passing, bent into the scale, or colour) and which scale they come from, the degrees it leans on, where it starts and lands, and what its bends do.
+- **The scale card** with its formula in this key, and **Jam this scale on the Desk**, which sets the Desk fretboard to that scale, root and box.
+- **Make it yours.** Exercises built from this lick: change the last note, play the same idea in the next box, add one new note (the step to the next scale), move the bend, answer the first bar with your own.
+
+Change the key under **Tempo, key and downbeat** and the breakdown follows. If a fret is misread, fix it in the alphaTex box and press **Update tab**; the theory updates too. With no key saved, it guesses one from the notes and says so.
 
 ### Test clip — what the reader got right
 

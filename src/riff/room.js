@@ -6,6 +6,7 @@ import { keyToFretboard } from './keys.js';
 import {
   MIN_SPEED, cleanTrainer, trainerAfterLoop, trainerBackOff, trainerBegin,
 } from './trainer.js';
+import { mountTheoryPanel, theoryPanelHtml } from './theory-panel.js';
 import { BEATS_PER_BAR, barStart, beatSeconds, countInBeats, loopRegion } from './timing.js';
 
 const KEYS = [
@@ -48,6 +49,14 @@ export function mountRiffRoom(root) {
   const tabHost = q('#riff-alphatab');
   const tabScroll = q('#riff-tab-scroll');
   const tab = mountPlayableTab(tabHost, tabScroll);
+  const theory = mountTheoryPanel(q('#riff-theory'), {
+    onLoopBar: (index) => loopBars(index + 1, index + 1),
+    onJam: (next) => {
+      deskApi.showFretboard(next);
+      setView('desk');
+      window.scrollTo({ top: document.querySelector('.neck-panel')?.offsetTop ?? 0, behavior: 'smooth' });
+    },
+  });
 
   const state = {
     riff: null,
@@ -116,8 +125,13 @@ export function mountRiffRoom(root) {
   q('#riff-set-b').addEventListener('click', () => setLoop(state.loopA, video.currentTime || 0));
   q('#riff-clear-ab').addEventListener('click', () => setLoop(null, null));
   q('#riff-loop-bars').addEventListener('click', () => {
-    const from = Math.max(1, Math.round(Number(q('#riff-bar-from').value) || 1));
-    const to = Math.max(from, Math.round(Number(q('#riff-bar-to').value) || from));
+    loopBars(Number(q('#riff-bar-from').value), Number(q('#riff-bar-to').value));
+  });
+
+  /** Loop bars `first` to `last` (1-based, inclusive) on the riff's grid. */
+  function loopBars(first, last) {
+    const from = Math.max(1, Math.round(first) || 1);
+    const to = Math.max(from, Math.round(last) || from);
     const bpm = riffBpm();
     const offset = riffOffset();
     const a = Math.max(0, barStart(from, bpm, offset));
@@ -130,7 +144,7 @@ export function mountRiffRoom(root) {
     setLoop(a, b);
     video.currentTime = a;
     setStatus(`Looping bar${from === to ? ` ${from}` : `s ${from}–${to}`}`);
-  });
+  }
   q('#riff-speed').addEventListener('input', () => {
     setSpeed(Number(q('#riff-speed').value) / 100);
     if (state.run) {
@@ -191,7 +205,11 @@ export function mountRiffRoom(root) {
   q('#riff-half').addEventListener('click', () => commitBpm((state.riff?.bpm || 80) / 2));
   q('#riff-double').addEventListener('click', () => commitBpm((state.riff?.bpm || 80) * 2));
   q('#riff-tap').addEventListener('click', tapTempo);
-  q('#riff-key').addEventListener('change', () => savePatch({ key: q('#riff-key').value }));
+  q('#riff-key').addEventListener('change', () => {
+    const key = q('#riff-key').value;
+    theory.update({ alphatex: state.riff?.alphatex, key });
+    savePatch({ key });
+  });
   q('#riff-offset').addEventListener('change', () => {
     const offset = Number(q('#riff-offset').value);
     savePatch({ downbeatOffset: offset });
@@ -200,10 +218,14 @@ export function mountRiffRoom(root) {
   q('#riff-apply-tex').addEventListener('click', () => {
     const alphatex = q('#riff-tex').value;
     tab.load(alphatex);
+    theory.update({ alphatex, key: state.riff?.key });
     savePatch({ alphatex });
   });
   q('#riff-neck').addEventListener('click', () => {
-    const next = keyToFretboard(state.riff?.key || q('#riff-key').value);
+    const a = theory.analysis;
+    const next = a
+      ? { rootPc: a.key.rootPc, scaleId: a.scale.id, patternId: 'all' }
+      : keyToFretboard(state.riff?.key || q('#riff-key').value);
     if (next) deskApi.showFretboard(next);
     setView('desk');
   });
@@ -300,6 +322,7 @@ export function mountRiffRoom(root) {
     const beats = beatsFromMedia(video.currentTime, Number(riff.bpm) || 80, Number(riff.downbeatOffset) || 0);
     tab.follow(beats);
     const bar = Math.floor(beats / 4);
+    theory.setBar(beats < 0 ? null : bar);
     q('#riff-where').textContent = beats < 0
       ? 'Before the first bar'
       : `Bar ${bar + 1} · beat ${(beats % 4 + 1).toFixed(1)}`;
@@ -629,6 +652,7 @@ export function mountRiffRoom(root) {
       strip.appendChild(img);
     }
     tab.load(riff.alphatex || '');
+    theory.update({ alphatex: riff.alphatex, key: riff.key });
     sync.configure({ bpm: Number(riff.bpm) || 80, offset: Number(riff.downbeatOffset) || 0 });
     paintLoop();
     paintSpeed();
@@ -666,6 +690,7 @@ export function mountRiffRoom(root) {
       q('#riff-title').textContent = 'Pick a song';
       q('#riff-by').textContent = '';
       tab.load('');
+      theory.update({ alphatex: '' });
     }
     await refreshList();
     setStatus('Deleted from this Mac. Sync will fetch it again if the link is still in the queue.');
@@ -913,5 +938,6 @@ function template() {
         <button id="riff-apply-tex" type="button">Update tab</button>
       </details>
     </section>
+    ${theoryPanelHtml()}
   `;
 }
