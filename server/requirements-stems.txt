@@ -1,5 +1,16 @@
-# Optional: splitting a riff into guitar / drums / bass / other (Demucs).
+# Optional: splitting a riff into guitar / drums / bass (Demucs).
 # About 1-2 GB with PyTorch; the model (~50 MB) downloads on the first split.
-# Install with: npm run setup:stems
-demucs>=4.0.1
+# Install with: npm run setup:stems   (or ./launch --stems)
+#
+# Demucs itself is installed separately with --no-deps (see
+# scripts/setup-stems.mjs). Its own dependency list pulls in `sphn`, a Rust
+# audio reader with no wheel for new Pythons (3.15 fails to build), and
+# `lameenc`, an MP3 encoder. The app decodes and writes audio with ffmpeg and
+# the wave module, so it needs neither. These are what it does use:
 torch>=2.1
+einops
+julius>=0.2.3
+pyyaml
+tqdm
+huggingface-hub
+safetensors
