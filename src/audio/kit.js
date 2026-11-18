@@ -12,6 +12,18 @@ export function playHat(hat, time, velocity) {
   hat.triggerAttackRelease(HAT_FREQ, '32n', time, velocity);
 }
 
+/** The metronome click voice (accent C7, other beats G6). */
+export function createClick() {
+  const click = new Tone.MembraneSynth({
+    pitchDecay: 0.004,
+    octaves: 2,
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 },
+  });
+  click.volume.value = -6;
+  return click;
+}
+
 export function createAudio() {
   const kitGain = new Tone.Gain(1).toDestination();
   const clickGain = new Tone.Gain(0.9).toDestination();
@@ -48,13 +60,7 @@ export function createAudio() {
   }).connect(kitGain);
   hat.volume.value = -20;
 
-  const click = new Tone.MembraneSynth({
-    pitchDecay: 0.004,
-    octaves: 2,
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 },
-  }).connect(clickGain);
-  click.volume.value = -6;
+  const click = createClick().connect(clickGain);
 
   const riffSynth = new Tone.DuoSynth({
     harmonicity: 1.001,

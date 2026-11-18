@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { createAudio, playHat } from '../audio/kit.js';
+import { createAudio, createClick, playHat } from '../audio/kit.js';
 
 export const DRUM_PATTERNS = {
   rock: {
@@ -73,7 +73,27 @@ export function createRiffDrums() {
     if (pattern.hat[index]) playHat(audio.hat, when, beat ? 0.4 : 0.28);
   }
 
-  return { setVolume, setEnabled, setPattern, hit, get patternId() { return patternId; } };
+  /**
+   * Schedule count-in clicks at audio-context times. Uses its own short-lived
+   * voice so cancel() silences clicks that are already scheduled. Plays even
+   * when the kit is switched off: the count-in is for the player, not the mix.
+   */
+  function countIn(clicks) {
+    const voice = createClick().toDestination();
+    for (const { time, accent } of clicks) {
+      voice.triggerAttackRelease(accent ? 'C7' : 'G6', '32n', time, accent ? 1 : 0.6);
+    }
+    const last = clicks.length ? clicks[clicks.length - 1].time : Tone.now();
+    const cleanup = window.setTimeout(() => voice.dispose(), Math.max(0, (last - Tone.now()) * 1000) + 500);
+    return {
+      cancel() {
+        window.clearTimeout(cleanup);
+        voice.dispose();
+      },
+    };
+  }
+
+  return { setVolume, setEnabled, setPattern, hit, countIn, get patternId() { return patternId; } };
 }
 
 /**

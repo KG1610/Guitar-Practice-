@@ -24,6 +24,7 @@ from urllib.parse import unquote, urlparse
 
 from server.analyze import analyse_audio
 from server.music import build_alphatex, clean_title, hints_from_text, tab_chroma
+from server.practice import clean_speed, clean_trainer
 from server.queue import known_keys, normalize_url, parse_queue, pending_entries, read_local_queue
 from server.tab_vision import process_video
 
@@ -31,8 +32,6 @@ ROOT = Path(__file__).resolve().parents[1]
 LIBRARY = Path(os.environ.get('RIFF_LIBRARY', ROOT / 'riffs-library'))
 PORT = int(os.environ.get('RIFF_PORT', '8787'))
 HOST = os.environ.get('RIFF_HOST', '127.0.0.1')
-# Slowest Riff Room playback rate (matches MIN_SPEED in src/riff/room.js).
-MIN_SPEED = 0.25
 QUEUE_URL = os.environ.get(
     'RIFF_QUEUE_URL',
     'https://raw.githubusercontent.com/KG1610/Guitar-Practice-/main/riffs.json',
@@ -514,16 +513,15 @@ def _write_riff(riff_id: str, patch: dict) -> dict | None:
     record = json.loads(path.read_text())
     allowed = (
         'title', 'uploader', 'bpm', 'key', 'notes', 'alphatex',
-        'downbeatOffset', 'loopA', 'loopB', 'speed', 'loopClip',
+        'downbeatOffset', 'loopA', 'loopB', 'speed', 'loopClip', 'trainer',
     )
     for key in allowed:
         if key in patch:
             record[key] = patch[key]
     if 'speed' in patch:
-        try:
-            record['speed'] = min(1, max(MIN_SPEED, float(patch['speed'])))
-        except (TypeError, ValueError):
-            record['speed'] = 1
+        record['speed'] = clean_speed(patch['speed'])
+    if 'trainer' in patch:
+        record['trainer'] = clean_trainer(patch['trainer'])
     if 'bpm' in patch:
         record['bpmSource'] = 'manual'
     if 'key' in patch:

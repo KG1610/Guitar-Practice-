@@ -54,9 +54,14 @@ If that request fails (the file is not on `main` yet, or the machine is offline)
 ```
 
 `url` is required (Facebook, Instagram, or YouTube). `title`, `notes`, and `added` (`YYYY-MM-DD`) are optional. A bare array of those objects is accepted too. The queue currently starts with the A minor reel above.
-3. The player loops the whole clip or an A–B section. Speed is 25–100% with pitch preserved (`preservesPitch`). The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
-4. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
-5. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
+3. The player loops the whole clip, an A–B section, or a range of bars (**Bars 3 to 4 → Loop bars**, worked out from the riff's BPM and downbeat). Speed is 25–100% with pitch preserved (`preservesPitch`). **Count-in** plays one bar of clicks on the riff's grid at the current speed, before the first pass or before every loop.
+
+   **Speed builder:** set a start speed, a step, how many loops per step, and a target (default 50% → +5% every 4 loops → 100%). It raises the speed at the loop point. **Missed it — slow down** drops one step and restarts the count. The speed and the builder settings are saved with the riff, so the next session picks up where you stopped.
+
+   The Songs list folds away once a riff is open; click **Songs** to get it back. Tempo, key and downbeat corrections sit under **Tempo, key and downbeat**.
+4. The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
+5. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
+6. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
 
 **Neck** jumps back to the fretboard in the printed key.
 
@@ -171,7 +176,7 @@ Neck drills pulse matching notes from drum events while the kit/click runs.
 
 ## Stack
 
-Vite + Tone.js synth kit. No sample licenses. Tempo runs 30–250 BPM. Open the app with `?debug` to show the debug panel.
+Vite + Tone.js synth kit. No sample licenses. Tests: `npm test` (front end, Vitest) and `python3 -m pytest server/tests` (helper). Tempo runs 30–250 BPM. Open the app with `?debug` to show the debug panel.
 
 ## Code layout
 

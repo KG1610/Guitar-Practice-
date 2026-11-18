@@ -35,7 +35,16 @@ body[data-view="riff"] .top-controls {
 }
 
 .riff-room { display: none; }
-body[data-view="riff"] .riff-room { display: block; }
+body[data-view="riff"] .riff-room {
+  display: block;
+  position: relative;
+  z-index: 1;
+  /* Same column as the header above (.desk in riff view). */
+  width: min(1180px, calc(100% - 1.5rem));
+  margin: 0 auto;
+  padding-bottom: 3.5rem;
+}
+body[data-view="riff"] .desk { padding-bottom: 0; }
 body[data-view="riff"] .desk { width: min(1180px, calc(100% - 1.5rem)); }
 
 .sr {
@@ -98,7 +107,8 @@ body[data-view="riff"] .desk { width: min(1180px, calc(100% - 1.5rem)); }
   padding: 0.55rem 0.7rem;
 }
 
-.riff-import > button, .riff-ab button, .riff-meta button, .riff-tex button, .riff-drum-picks button {
+.riff-import > button, .riff-ab button, .riff-meta button, .riff-tex button, .riff-drum-picks button,
+.riff-bars button, #riff-loop, #riff-backoff {
   appearance: none;
   border: 1px solid var(--line);
   background: var(--panel);
@@ -276,7 +286,7 @@ body[data-view="riff"] .desk { width: min(1180px, calc(100% - 1.5rem)); }
   gap: 0.65rem;
 }
 
-.riff-transport, .riff-ab, .riff-drums, .riff-meta {
+.riff-transport, .riff-ab, .riff-drums, .riff-meta, .riff-bars, .riff-trainer-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
@@ -358,6 +368,73 @@ body[data-view="riff"] .desk { width: min(1180px, calc(100% - 1.5rem)); }
   font-size: 0.78rem;
   min-height: 8rem;
 }
+
+/* Songs drawer: open to pick a riff, closed while practising. */
+.riff-library {
+  margin-top: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.7rem 0.85rem;
+}
+.riff-library > summary {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  cursor: pointer;
+  list-style: none;
+}
+.riff-library > summary::-webkit-details-marker { display: none; }
+.riff-library > summary::before { content: "▸"; color: var(--muted); }
+.riff-library[open] > summary::before { content: "▾"; }
+.riff-library-hint { margin-left: auto; color: var(--muted); font-size: 0.8rem; }
+.riff-library .song-picker { border: 0; padding: 0; background: transparent; }
+.riff-library .riff-import { margin-top: 0.8rem; }
+
+.riff-stage { margin-top: 1rem; }
+
+.riff-inline {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.riff-inline input, .riff-inline select {
+  width: 4.2rem;
+  background: var(--bg-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  padding: 0.35rem 0.45rem;
+}
+.riff-inline select { width: auto; }
+
+.riff-trainer {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.riff-trainer .riff-trainer-row,
+.riff-trainer #riff-backoff { display: none; }
+.riff-trainer.is-on .riff-trainer-row { display: flex; }
+.riff-trainer.is-on #riff-backoff { display: inline-block; justify-self: start; }
+.riff-trainer.is-on { border-color: var(--ember-dim); }
+.riff-trainer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+#riff-trainer-readout { color: var(--ember-2); font-weight: 650; font-size: 0.85rem; }
+#riff-backoff:disabled { opacity: 0.5; cursor: default; }
+
+.riff-tempo > summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+.riff-tempo .riff-meta { margin-top: 0.5rem; }
 
 @media (max-width: 800px) {
   .riff-stage { grid-template-columns: 1fr; }
