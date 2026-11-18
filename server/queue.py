@@ -57,6 +57,20 @@ def read_local_queue(path: Path | None = None) -> list[dict]:
         return []
 
 
+def merge_queues(*lists: list[dict]) -> list[dict]:
+    """Join queue lists in order, keeping the first row for each link."""
+    merged = []
+    seen = set()
+    for entries in lists:
+        for entry in entries:
+            key = normalize_url(entry['url'])
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            merged.append(entry)
+    return merged
+
+
 def known_keys(records: list[dict]) -> set[str]:
     keys = set()
     for record in records:

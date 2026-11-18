@@ -26,7 +26,7 @@ from server.analyze import analyse_audio
 from server.music import build_alphatex, clean_title, hints_from_text, tab_chroma
 from server import stems
 from server.practice import clean_mix, clean_speed, clean_trainer
-from server.queue import known_keys, normalize_url, parse_queue, pending_entries, read_local_queue
+from server.queue import known_keys, merge_queues, normalize_url, parse_queue, pending_entries, read_local_queue
 from server.tab_vision import process_video
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -443,19 +443,25 @@ def _list_riffs(summaries: bool = False) -> list[dict]:
 
 
 def fetch_queue() -> dict:
-    """GitHub raw `riffs.json` on main, then the copy in this repo."""
+    """`riffs.json` on GitHub main plus the copy checked out here, merged.
+
+    Both count: links pushed to a branch are in the local copy before they
+    reach main, and links on main may be newer than this checkout.
+    """
+    remote: list[dict] = []
     error = ''
     try:
         request = urllib.request.Request(QUEUE_URL, headers={'User-Agent': 'practice-desk-riff-room'})
         with urllib.request.urlopen(request, timeout=8) as response:
-            data = json.loads(response.read().decode())
-        return {'source': 'github', 'url': QUEUE_URL, 'entries': parse_queue(data), 'error': ''}
+            remote = parse_queue(json.loads(response.read().decode()))
     except Exception as exc:  # noqa: BLE001 - network, 404, and bad JSON all fall back
         error = str(exc)
+    local = read_local_queue()
+    source = 'github+local' if remote and local else ('github' if remote else 'local')
     return {
-        'source': 'local',
+        'source': source,
         'url': QUEUE_URL,
-        'entries': read_local_queue(),
+        'entries': merge_queues(remote, local),
         'error': error,
     }
 
@@ -466,13 +472,14 @@ def sync_queue(job_id: str) -> None:
         library = _list_riffs(summaries=False)
         pending = pending_entries(queue['entries'], library)
         total = len(pending)
-        label = 'GitHub' if queue['source'] == 'github' else 'the queue file in this repo'
+        label = 'the song queue'
         if total == 0:
             _job(job_id, status='done', step=f'Library is up to date ({label})',
                  done=0, total=0, source=queue['source'], riffs=_list_riffs(summaries=True))
             return
         added = 0
         skipped = 0
+        failed = []
         for index, entry in enumerate(pending):
             name = entry.get('title') or entry['url']
             _job(job_id, status='syncing', step=f'{index + 1} of {total} — {name}',
@@ -485,6 +492,8 @@ def sync_queue(job_id: str) -> None:
                 skipped += 1
             elif outcome.get('status') == 'done':
                 added += 1
+            elif outcome.get('status') == 'error':
+                failed.append(name)
         if added:
             step = f'Added {added} from {label}'
             if skipped:
@@ -493,6 +502,8 @@ def sync_queue(job_id: str) -> None:
             step = f'Already in the library ({label})'
         else:
             step = f'Nothing new from {label}'
+        if failed:
+            step += f'. {len(failed)} could not be downloaded: {", ".join(failed)}'
         _job(job_id, status='done', step=step,
              done=total, total=total, source=queue['source'], riffs=_list_riffs(summaries=True))
     except Exception as exc:  # noqa: BLE001
