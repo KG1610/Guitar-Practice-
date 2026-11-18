@@ -24,5 +24,7 @@ try {
 const pipArgs = python === 'python3' ? ['--user'] : [];
 console.log('Installing PyTorch + Demucs (about 1–2 GB, one time)…');
 await run(python, ['-m', 'pip', 'install', ...pipArgs, '-r', 'server/requirements.txt', '-r', 'server/requirements-stems.txt']);
+// Demucs without its dependency list: see server/requirements-stems.txt.
+await run(python, ['-m', 'pip', 'install', ...pipArgs, '--no-deps', 'demucs>=4.0.1']);
 console.log('Downloading the splitting model (~50 MB, one time)…');
 await run(python, ['-c', 'from server.stems import _model; _model(); print("Splitting is ready.")']);
