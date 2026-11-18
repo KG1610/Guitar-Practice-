@@ -9,7 +9,8 @@
     "dev:desk": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "setup:stems": "node scripts/setup-stems.mjs"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.8.4",

@@ -56,21 +56,32 @@ export function createRiffDrums() {
     if (DRUM_PATTERNS[id]) patternId = id;
   }
 
+  // Last time each voice was scheduled. Hits are scheduled slightly ahead of
+  // the video; after a loop jump the next hit can come out earlier than one
+  // already queued, which Tone's noise and metal voices reject. Drop those.
+  const lastAt = { click: -Infinity, kick: -Infinity, snare: -Infinity, hat: -Infinity };
+
+  function claim(voice, when) {
+    if (when <= lastAt[voice]) return false;
+    lastAt[voice] = when;
+    return true;
+  }
+
   function hit(step, when) {
     if (!enabled) return;
     const pattern = DRUM_PATTERNS[patternId];
     const index = ((step % pattern.steps) + pattern.steps) % pattern.steps;
     const beat = index % (pattern.steps / 4) === 0;
     if (pattern.clickOnly) {
-      audio.click.triggerAttackRelease(index === 0 ? 'C7' : 'G6', '32n', when, index === 0 ? 1 : 0.55);
+      if (claim('click', when)) audio.click.triggerAttackRelease(index === 0 ? 'C7' : 'G6', '32n', when, index === 0 ? 1 : 0.55);
       return;
     }
-    if (pattern.kick[index]) audio.kick.triggerAttackRelease('C1', '16n', when);
-    if (pattern.snare[index]) {
+    if (pattern.kick[index] && claim('kick', when)) audio.kick.triggerAttackRelease('C1', '16n', when);
+    if (pattern.snare[index] && claim('snare', when)) {
       audio.snareNoise.triggerAttackRelease('16n', when);
       audio.snareBody.triggerAttackRelease('G2', '32n', when);
     }
-    if (pattern.hat[index]) playHat(audio.hat, when, beat ? 0.4 : 0.28);
+    if (pattern.hat[index] && claim('hat', when)) playHat(audio.hat, when, beat ? 0.4 : 0.28);
   }
 
   /**

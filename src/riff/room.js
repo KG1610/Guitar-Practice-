@@ -4,15 +4,23 @@ import { DRUM_PATTERNS, createDrumSync, createRiffDrums } from './drums.js';
 import { beatsFromMedia, mountPlayableTab } from './tab.js';
 import { keyToFretboard } from './keys.js';
 import {
-  MIN_SPEED, cleanTrainer, trainerAfterLoop, trainerBackOff, trainerBegin,
+  MIN_SPEED, cleanTrainer, guitarAfterLoop, trainerAfterLoop, trainerBackOff, trainerBegin,
 } from './trainer.js';
 import { mountTheoryPanel, theoryPanelHtml } from './theory-panel.js';
+import { PARTS, createStemPlayer } from './stems.js';
 import { BEATS_PER_BAR, barStart, beatSeconds, countInBeats, loopRegion } from './timing.js';
 
 const KEYS = [
   'A minor', 'C major', 'E minor', 'G major', 'D minor', 'F major',
   'B minor', 'D major', 'F# minor', 'A major', 'C# minor', 'E major',
 ];
+
+const MIX_PRESETS = {
+  full: { guitar: 1, drums: 1, bass: 1 },
+  half: { guitar: 0.5, drums: 1, bass: 1 },
+  backing: { guitar: 0, drums: 1, bass: 1 },
+  drums: { guitar: 0, drums: 1, bass: 0 },
+};
 
 const HELPER_DOWN = 'The Riff Room helper is not running. Start the app with ./launch.';
 
@@ -49,6 +57,9 @@ export function mountRiffRoom(root) {
   const tabHost = q('#riff-alphatab');
   const tabScroll = q('#riff-tab-scroll');
   const tab = mountPlayableTab(tabHost, tabScroll);
+  const stems = createStemPlayer(video);
+  // For troubleshooting sync: open the app with ?debug and read window.riffDebug.
+  if (new URLSearchParams(location.search).has('debug')) window.riffDebug = { stems, video };
   const theory = mountTheoryPanel(q('#riff-theory'), {
     onLoopBar: (index) => loopBars(index + 1, index + 1),
     onJam: (next) => {
@@ -75,6 +86,9 @@ export function mountRiffRoom(root) {
     lastTime: null,
     countIn: null, // pending count-in: { timer, clicks }
     helperUp: false,
+    canSplit: false,
+    splitting: false,
+    mixTimer: 0,
     toolsMissing: false,
   };
 
@@ -162,7 +176,7 @@ export function mountRiffRoom(root) {
     }
     saveTrainer();
   });
-  ['#trainer-start', '#trainer-step', '#trainer-every', '#trainer-target'].forEach((sel) => {
+  ['#trainer-start', '#trainer-step', '#trainer-every', '#trainer-target', '#trainer-fade'].forEach((sel) => {
     q(sel).addEventListener('change', () => {
       state.trainer = cleanTrainer({
         enabled: state.trainer.enabled,
@@ -170,6 +184,7 @@ export function mountRiffRoom(root) {
         step: Number(q('#trainer-step').value) / 100,
         every: Number(q('#trainer-every').value),
         target: Number(q('#trainer-target').value) / 100,
+        fadeGuitar: q('#trainer-fade').checked,
       });
       if (state.run) state.run = { ...state.run, loops: 0 };
       saveTrainer();
@@ -192,6 +207,90 @@ export function mountRiffRoom(root) {
     renderPicker();
   });
   q('#riff-rename').addEventListener('click', () => renameRiff(state.riff));
+  root.querySelectorAll('[data-part]').forEach((input) => {
+    input.addEventListener('input', () => {
+      stems.setVolume(input.dataset.part, Number(input.value) / 100);
+      paintMix();
+      saveMix();
+    });
+  });
+  root.querySelectorAll('[data-mix-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = MIX_PRESETS[btn.dataset.mixPreset];
+      for (const part of PARTS) stems.setVolume(part, preset[part]);
+      paintMix();
+      saveMix();
+    });
+  });
+  q('#riff-split').addEventListener('click', splitAudio);
+
+  function saveMix() {
+    window.clearTimeout(state.mixTimer);
+    state.mixTimer = window.setTimeout(() => savePatch({ mix: stems.volumes }), 400);
+  }
+
+  function paintMix() {
+    const split = stems.active;
+    q('#riff-mix-faders').hidden = !split;
+    q('#riff-video-vol-label').hidden = split;
+    q('#riff-split').hidden = split || !state.riff;
+    q('#riff-split').disabled = state.splitting || !state.canSplit;
+    const v = stems.volumes;
+    for (const part of PARTS) {
+      const input = q(`[data-part="${part}"]`);
+      input.value = String(Math.round((v[part] ?? 1) * 100));
+      q(`[data-part-readout="${part}"]`).textContent = v[part] === 0 ? 'Off' : `${Math.round((v[part] ?? 1) * 100)}%`;
+    }
+    root.querySelectorAll('[data-mix-preset]').forEach((btn) => {
+      const preset = MIX_PRESETS[btn.dataset.mixPreset];
+      const on = PARTS.every((p) => Math.abs((v[p] ?? 1) - preset[p]) < 0.01);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    let status = 'Not split yet';
+    if (split) status = 'Guitar, drums and bass';
+    else if (state.splitting) status = 'Splitting…';
+    else if (!state.canSplit) status = 'Run ./launch --stems once to turn this on';
+    q('#riff-mix-status').textContent = status;
+    if (state.riff) paintTrainer();
+  }
+
+  async function splitAudio() {
+    if (!state.riff || state.splitting) return;
+    const id = state.riff.id;
+    state.splitting = true;
+    paintMix();
+    const { ok, body } = await api(`/api/riffs/${id}/stems`, { method: 'POST' });
+    if (!ok) {
+      state.splitting = false;
+      paintMix();
+      setStatus(body.error || 'Could not start the split');
+      return;
+    }
+    setStatus('Splitting the audio — about a minute the first time');
+    const timer = setInterval(async () => {
+      const { ok: jobOk, body: job } = await api(`/api/jobs/${body.jobId}`);
+      if (!jobOk || job.status === 'error') {
+        clearInterval(timer);
+        state.splitting = false;
+        paintMix();
+        setStatus(job.error || 'The split failed');
+        return;
+      }
+      if (job.status !== 'done') {
+        setStatus(job.step || 'Splitting…');
+        return;
+      }
+      clearInterval(timer);
+      state.splitting = false;
+      if (state.riff?.id === id && job.riff) {
+        state.riff = job.riff;
+        stems.load(job.riff.stems, job.riff.mix);
+        setStatus('Split done. Fade the guitar to play it yourself.');
+      }
+      paintMix();
+    }, 1000);
+  }
+
   q('#riff-video-vol').addEventListener('input', () => {
     video.volume = Number(q('#riff-video-vol').value) / 100;
   });
@@ -312,6 +411,15 @@ export function mountRiffRoom(root) {
     if (next.speed !== before) {
       setSpeed(next.speed);
       setStatus(next.done ? `Target reached — ${pct(next.speed)}` : `Up to ${pct(next.speed)}`);
+    } else if (stems.active) {
+      const was = stems.volumes.guitar ?? 1;
+      const now = guitarAfterLoop(state.trainer, state.run, was);
+      if (now !== was) {
+        stems.setVolume('guitar', now);
+        paintMix();
+        saveMix();
+        setStatus(now === 0 ? 'Guitar is out. It is all you now.' : `Guitar down to ${pct(now)}`);
+      }
     }
     paintTrainer(next.done);
   }
@@ -386,6 +494,9 @@ export function mountRiffRoom(root) {
     q('#trainer-step').value = String(Math.round(t.step * 100));
     q('#trainer-every').value = String(t.every);
     q('#trainer-target').value = String(Math.round(t.target * 100));
+    q('#trainer-fade').checked = t.fadeGuitar;
+    q('#trainer-fade').disabled = !stems.active;
+    q('#trainer-fade-label').title = stems.active ? '' : 'Split the audio first (Parts)';
     q('.riff-trainer').classList.toggle('is-on', t.enabled);
     q('#riff-backoff').disabled = !state.run;
     const readout = q('#riff-trainer-readout');
@@ -653,6 +764,9 @@ export function mountRiffRoom(root) {
     }
     tab.load(riff.alphatex || '');
     theory.update({ alphatex: riff.alphatex, key: riff.key });
+    if (riff.stems) stems.load(riff.stems, riff.mix);
+    else stems.unload();
+    paintMix();
     sync.configure({ bpm: Number(riff.bpm) || 80, offset: Number(riff.downbeatOffset) || 0 });
     paintLoop();
     paintSpeed();
@@ -691,6 +805,8 @@ export function mountRiffRoom(root) {
       q('#riff-by').textContent = '';
       tab.load('');
       theory.update({ alphatex: '' });
+      stems.unload();
+      paintMix();
     }
     await refreshList();
     setStatus('Deleted from this Mac. Sync will fetch it again if the link is still in the queue.');
@@ -760,6 +876,7 @@ export function mountRiffRoom(root) {
       const missing = [];
       if (!body.ffmpeg) missing.push('ffmpeg');
       if (!body.ytdlp) missing.push('yt-dlp');
+      state.canSplit = Boolean(body.stems);
       if (missing.length) {
         state.toolsMissing = true;
         q('#riff-helper').hidden = false;
@@ -888,17 +1005,39 @@ function template() {
             <label class="riff-inline">+ <input id="trainer-step" type="number" min="1" max="25" value="5" />%</label>
             <label class="riff-inline">every <input id="trainer-every" type="number" min="1" max="32" value="4" /> loops</label>
             <label class="riff-inline">up to <input id="trainer-target" type="number" min="25" max="100" step="5" value="100" />%</label>
+            <label class="check riff-inline" id="trainer-fade-label"><input id="trainer-fade" type="checkbox" /><span>then fade the guitar out</span></label>
           </div>
           <button id="riff-backoff" type="button" disabled>Missed it — slow down</button>
         </section>
+        <section class="riff-mix" aria-label="Parts">
+          <div class="riff-mix-head">
+            <span class="grid-title">Parts</span>
+            <output id="riff-mix-status">Not split yet</output>
+          </div>
+          <button id="riff-split" type="button" hidden>Split guitar from drums</button>
+          <div id="riff-mix-faders" class="riff-mix-faders" hidden>
+            ${['guitar', 'drums', 'bass'].map((part) => `
+            <label class="riff-fader">
+              <span>${part[0].toUpperCase()}${part.slice(1)}</span>
+              <input data-part="${part}" type="range" min="0" max="100" value="100" />
+              <output data-part-readout="${part}">100%</output>
+            </label>`).join('')}
+            <div class="riff-mix-presets">
+              <button type="button" data-mix-preset="full">Full</button>
+              <button type="button" data-mix-preset="half">Guitar 50%</button>
+              <button type="button" data-mix-preset="backing">No guitar</button>
+              <button type="button" data-mix-preset="drums">Drums only</button>
+            </div>
+          </div>
+          <label class="riff-slider" id="riff-video-vol-label">Video
+            <input id="riff-video-vol" type="range" min="0" max="100" value="80" />
+          </label>
+        </section>
         <div class="riff-drums">
-          <label class="check"><input id="riff-drums-on" type="checkbox" checked /><span>Drums</span></label>
+          <label class="check"><input id="riff-drums-on" type="checkbox" checked /><span>Practice kit</span></label>
           <div class="riff-drum-picks">${drums}</div>
           <label class="riff-slider">Kit
             <input id="riff-drum-vol" type="range" min="0" max="100" value="80" />
-          </label>
-          <label class="riff-slider">Video
-            <input id="riff-video-vol" type="range" min="0" max="100" value="80" />
           </label>
         </div>
         <details class="riff-tempo">

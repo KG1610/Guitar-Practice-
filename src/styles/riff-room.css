@@ -369,6 +369,61 @@ body[data-view="riff"] .desk { width: min(1180px, calc(100% - 1.5rem)); }
   min-height: 8rem;
 }
 
+/* Split parts mixer */
+.riff-mix {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.riff-mix-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+#riff-mix-status { color: var(--muted); font-size: 0.82rem; }
+#riff-split {
+  justify-self: start;
+  appearance: none;
+  border: 0;
+  background: var(--ember);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+}
+#riff-split:disabled { opacity: 0.5; cursor: default; }
+.riff-mix-faders { display: grid; gap: 0.45rem; }
+.riff-mix-faders[hidden] { display: none; }
+.riff-fader {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 3rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+.riff-fader output { color: var(--muted); font-size: 0.8rem; text-align: right; }
+.riff-mix-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.riff-mix-presets button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  border-radius: 10px;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+.riff-mix-presets button[aria-pressed="true"] {
+  background: var(--ember-dim);
+  color: var(--ember-2);
+  border-color: transparent;
+}
+#riff-video-vol-label[hidden] { display: none; }
+
 /* Songs drawer: open to pick a riff, closed while practising. */
 .riff-library {
   margin-top: 1rem;

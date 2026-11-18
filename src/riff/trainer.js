@@ -16,7 +16,11 @@ export const TRAINER_DEFAULTS = Object.freeze({
   step: 0.05,
   every: 4,
   target: 1,
+  fadeGuitar: false,
 });
+
+/** How much the guitar part drops each step once the target speed is reached. */
+export const FADE_STEP = 0.25;
 
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
@@ -38,6 +42,7 @@ export function cleanTrainer(raw = {}) {
     step: roundSpeed(clamp(num(raw.step, TRAINER_DEFAULTS.step), 0.01, 0.25)),
     every: Math.round(clamp(num(raw.every, TRAINER_DEFAULTS.every), 1, 32)),
     target,
+    fadeGuitar: Boolean(raw.fadeGuitar),
   };
 }
 
@@ -57,6 +62,17 @@ export function trainerAfterLoop(settings, run) {
   if (loops < settings.every) return { speed: run.speed, loops, stepped: false, done: false };
   const speed = roundSpeed(Math.min(settings.target, run.speed + settings.step));
   return { speed, loops: 0, stepped: true, done: speed >= settings.target };
+}
+
+/**
+ * After a loop at the target speed: with fadeGuitar on, drop the guitar part
+ * one step every `every` loops until it is gone. Returns the new volume.
+ * `run` is the state returned by trainerAfterLoop for this loop.
+ */
+export function guitarAfterLoop(settings, run, volume) {
+  if (!settings.fadeGuitar || run.speed < settings.target) return volume;
+  if (run.loops === 0 || run.loops % settings.every !== 0) return volume;
+  return roundSpeed(Math.max(0, volume - FADE_STEP));
 }
 
 /** Missed it: one step slower (never below the floor) and count again. */

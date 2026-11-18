@@ -17,6 +17,12 @@ brew install ffmpeg yt-dlp
 chmod +x launch   # once, if ./launch is not executable yet
 ```
 
+To split riffs into guitar / drums / bass, run this once (about 1–2 GB for PyTorch and Demucs, plus a ~50 MB model):
+
+```bash
+./launch --stems      # or: npm run setup:stems
+```
+
 Or the long form: `npm install` then `npm start` (same as `npm run dev`).
 
 Open `http://localhost:5173`. Headphones recommended. **Space** starts and stops whatever view you're in (Desk or Riff Room).
@@ -64,6 +70,18 @@ If that request fails (the file is not on `main` yet, or the machine is offline)
 6. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
 
 **Neck** jumps back to the fretboard in the detected scale.
+
+### Parts: fade the guitar out
+
+**Parts → Split guitar from drums** runs Demucs on this Mac (about 10 seconds for a 30-second reel on a recent laptop; it runs once per riff and the parts are saved in its folder as WAV). Then there are three faders, **Guitar**, **Drums** and **Bass**, and presets: **Full**, **Guitar 50%**, **No guitar**, **Drums only**. The mix is saved with the riff.
+
+"Guitar" is everything that is not drums or bass. Demucs often files distorted lead guitar under "other", and these reels are guitar over drums, so the guitar fader takes all of it (keys or vocals would come along too).
+
+The parts follow the video: slowdown keeps their pitch, loops and the count-in work the same, and drift is corrected by nudging each part's rate (they measure within a few milliseconds of the video). The video's own sound is muted while parts are loaded.
+
+With the speed builder on, **then fade the guitar out** drops the guitar a quarter every N loops once you reach the target speed, until it is just you and the drums.
+
+The **Practice kit** (the synth beat) is separate; switch it off if the real drums are enough.
 
 ### Theory
 
