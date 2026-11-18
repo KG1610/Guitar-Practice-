@@ -115,6 +115,19 @@ Den Kondrashev, "Easy A Minor Guitar Solo 80 bpm for practise + tabs", Facebook 
 
 The stitched image is the thing to trust while you correct the playable tab. Nothing from the reel is committed; `riffs-library/` stays on the machine.
 
+## Practice session
+
+**Session** (next to Desk / Riff Room) plans a practice: **Warm-up → Riff → Theory → Jam** (5 / 15 / 5 / 10 min by default; switch blocks off or change minutes, saved in this browser). **Start session** and each block sets up the screen for you:
+
+- **Warm-up** loads a drill pattern and tempo on the Desk, with one exercise a day in rotation (chromatic 1-2-3-4, spider 1-3-2-4, pentatonic box in the riff's key saying the degrees, palm-muted chug, string skipping).
+- **Riff** opens the Riff Room on the riff you have open.
+- **Theory** scrolls to its breakdown and "Make it yours".
+- **Jam** sends the riff to the Desk: the scale and box the theory found, at the tempo you are practising at.
+
+A bar pinned to the bottom of the screen shows the block, the countdown and what to do, with **Pause**, **+1 min**, **Next** (or press **N**) and **End**. When time is up it chimes and lights **Next**; it never switches screens while you play. Finished sessions are logged in this browser (date, minutes actually played, riff); the planner shows the last one.
+
+**Jam this on the Desk** (Theory card, or **Neck**) works outside a session too.
+
 ## Desk features
 
 - **Multi-bar forms** — patterns can define a `form` array of 4–8 bars; the player advances bar-by-bar then loops the whole form. Grid + playhead follow the current bar.

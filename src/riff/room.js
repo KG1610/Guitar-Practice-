@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { deskApi } from '../bridge.js';
+import { deskApi, riffApi } from '../bridge.js';
 import { DRUM_PATTERNS, createDrumSync, createRiffDrums } from './drums.js';
 import { beatsFromMedia, mountPlayableTab } from './tab.js';
 import { keyToFretboard } from './keys.js';
@@ -69,11 +69,7 @@ export function mountRiffRoom(root) {
       theory.update({ alphatex, key: state.riff?.key });
       savePatch({ alphatex });
     },
-    onJam: (next) => {
-      deskApi.showFretboard(next);
-      setView('desk');
-      window.scrollTo({ top: document.querySelector('.neck-panel')?.offsetTop ?? 0, behavior: 'smooth' });
-    },
+    onJam: () => jamOnDesk(),
   });
 
   const state = {
@@ -328,12 +324,11 @@ export function mountRiffRoom(root) {
     savePatch({ alphatex });
   });
   q('#riff-neck').addEventListener('click', () => {
-    const a = theory.analysis;
-    const next = a
-      ? { rootPc: a.key.rootPc, scaleId: a.scale.id, patternId: 'all' }
-      : keyToFretboard(state.riff?.key || q('#riff-key').value);
-    if (next) deskApi.showFretboard(next);
-    setView('desk');
+    if (!jamOnDesk()) {
+      const next = keyToFretboard(q('#riff-key').value);
+      if (next) deskApi.showFretboard(next);
+      setView('desk');
+    }
   });
 
   root.querySelectorAll('[data-drum]').forEach((btn) => {
@@ -367,6 +362,31 @@ export function mountRiffRoom(root) {
   });
   video.addEventListener('timeupdate', onTime);
   video.addEventListener('seeked', () => { sync.configure({}); });
+
+  /**
+   * Send this riff to the Desk: the scale the theory found (or the key),
+   * its box, and the tempo you are practising at.
+   */
+  function jamOnDesk() {
+    if (!state.riff) return false;
+    const a = theory.analysis;
+    const fret = a
+      ? { rootPc: a.key.rootPc, scaleId: a.scale.id, patternId: a.box ? `box-${a.box.index}` : 'all' }
+      : keyToFretboard(state.riff.key || q('#riff-key').value);
+    const bpm = Math.round(riffBpm() * state.speed);
+    const scaleName = a ? `${a.key.name.split(' ')[0]} ${a.scale.name.toLowerCase()}` : (state.riff.key || '');
+    video.pause();
+    cancelCountIn();
+    deskApi.jam({ ...(fret || {}), bpm, label: `Jam: ${scaleName} at ${bpm} BPM` });
+    setView('desk');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return true;
+  }
+
+  riffApi.showView = (view) => setView(view);
+  riffApi.current = () => state.riff;
+  riffApi.jam = () => jamOnDesk();
+  riffApi.pause = () => { video.pause(); cancelCountIn(); };
 
   function riffBpm() {
     return Number(state.riff?.bpm) || 80;

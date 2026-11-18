@@ -373,5 +373,17 @@ deskApi.stop = () => {
 deskApi.showFretboard = (next) => {
   if (next && state.fretboardApi?.setState) state.fretboardApi.setState(next);
 };
+deskApi.jam = ({ rootPc, scaleId, patternId, bpm, label } = {}) => {
+  if (state.playing || state.countingIn) stop();
+  if (state.fretboardApi?.setState) state.fretboardApi.setState({ rootPc, scaleId, patternId });
+  if (bpm) setBpm(bpm);
+  setStatus(label ? `${label} - space to play` : 'Ready - space to play');
+};
+deskApi.loadPattern = ({ patternId, bpm, label } = {}) => {
+  if (state.playing || state.countingIn) stop();
+  if (patternId && resolvePattern(patternId)) loadPatternById(patternId, { applyDefaultBpm: !bpm });
+  if (bpm) setBpm(bpm);
+  if (label) setStatus(`${label} - space to play`);
+};
 
 }

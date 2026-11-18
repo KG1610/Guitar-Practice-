@@ -25,6 +25,7 @@
           <div class="view-nav" role="tablist" aria-label="Practice views">
             <button type="button" class="view-tab" data-view="desk" role="tab" aria-selected="true">Desk</button>
             <button type="button" class="view-tab" data-view="riff" role="tab" aria-selected="false">Riff Room</button>
+            <button type="button" class="session-tab" id="session-toggle" aria-expanded="false" aria-controls="session-panel">Session</button>
           </div>
         </div>
         <div class="top-controls">
@@ -39,6 +40,8 @@
           </label>
         </div>
       </header>
+
+      <div id="session-root"></div>
 
       <div class="workspace">
       <section class="stage" aria-label="Now playing">
