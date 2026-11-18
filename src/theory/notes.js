@@ -15,7 +15,8 @@ const TICKS_PER_QUARTER = 960;
  *   midi: number,
  *   pc: number,       // pitch class 0–11 (C = 0)
  *   bendTo: number|null, // pitch class the note is bent up to, if bent
- * }>, barCount: number, error: string|null }}
+ *   index: number,    // position among all notes in the tex (texedit.js)
+ * }>, total: number, barCount: number, error: string|null }}
  */
 export function notesFromTex(tex) {
   if (!tex || !tex.trim()) return { notes: [], barCount: 0, error: null };
@@ -31,12 +32,16 @@ export function notesFromTex(tex) {
   if (!staff) return { notes: [], barCount: 0, error: null };
   const strings = staff.tuning?.length || 6;
   const notes = [];
+  let index = -1; // every note in source order, dead notes included (see texedit.js)
+  let total = 0;
   for (const bar of staff.bars) {
     const voice = bar.voices[0];
     if (!voice) continue;
     for (const beat of voice.beats) {
       if (beat.isRest) continue;
       for (const note of beat.notes) {
+        index += 1;
+        total += 1;
         if (note.isDead || !Number.isFinite(note.realValue)) continue;
         const peak = note.hasBend && note.bendPoints?.length
           ? Math.max(...note.bendPoints.map((p) => p.value))
@@ -45,6 +50,7 @@ export function notesFromTex(tex) {
         const bendSemis = Math.round(peak / 2);
         const pc = ((note.realValue % 12) + 12) % 12;
         notes.push({
+          index,
           bar: bar.index,
           beat: beat.playbackStart / TICKS_PER_QUARTER,
           // alphaTab numbers strings from the lowest (1) up.
@@ -57,5 +63,5 @@ export function notesFromTex(tex) {
       }
     }
   }
-  return { notes, barCount: staff.bars.length, error: null };
+  return { notes, total, barCount: staff.bars.length, error: null };
 }

@@ -93,7 +93,9 @@ Under the tab, **Theory** reads the playable tab (through alphaTab's own parser,
 - **The scale card** with its formula in this key, and **Jam this scale on the Desk**, which sets the Desk fretboard to that scale, root and box.
 - **Make it yours.** Exercises built from this lick: change the last note, play the same idea in the next box, add one new note (the step to the next scale), move the bend, answer the first bar with your own.
 
-Change the key under **Tempo, key and downbeat** and the breakdown follows. If a fret is misread, fix it in the alphaTex box and press **Update tab**; the theory updates too. With no key saved, it guesses one from the notes and says so.
+**Fix a misread fret.** Under the neck, every note is a chip (bar by bar). Click a chip or a note on the neck to hear it (plucked). If it does not match the video, pick the right string and fret: you hear the new note and see what it is (for example "→ C, the b3"). **Apply fix** rewrites just that note in the tab, keeping its bend or other effect, then the playable tab and the theory update and the riff is saved. **Change all N notes at this spot** fixes a repeated misread in one go. **Undo last fix** goes back (up to 20 fixes per riff while it is open). Red chips are outside the scale, so they are the first place to look.
+
+Change the key under **Tempo, key and downbeat** and the breakdown follows. The alphaTex box still works for anything the fixer cannot do (rhythm, adding or removing notes). With no key saved, it guesses one from the notes and says so.
 
 ### Test clip — what the reader got right
 

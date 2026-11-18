@@ -62,6 +62,13 @@ export function mountRiffRoom(root) {
   if (new URLSearchParams(location.search).has('debug')) window.riffDebug = { stems, video };
   const theory = mountTheoryPanel(q('#riff-theory'), {
     onLoopBar: (index) => loopBars(index + 1, index + 1),
+    onTexChange: (alphatex) => {
+      q('#riff-tex').value = alphatex;
+      tab.load(alphatex);
+      if (state.riff) state.riff.alphatex = alphatex;
+      theory.update({ alphatex, key: state.riff?.key });
+      savePatch({ alphatex });
+    },
     onJam: (next) => {
       deskApi.showFretboard(next);
       setView('desk');
@@ -763,6 +770,8 @@ export function mountRiffRoom(root) {
       strip.appendChild(img);
     }
     tab.load(riff.alphatex || '');
+    if (state.theoryRiffId !== riff.id) theory.reset();
+    state.theoryRiffId = riff.id;
     theory.update({ alphatex: riff.alphatex, key: riff.key });
     if (riff.stems) stems.load(riff.stems, riff.mix);
     else stems.unload();

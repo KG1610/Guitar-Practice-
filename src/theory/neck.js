@@ -31,8 +31,10 @@ function esc(s) {
  * @param analysis  analyzeLick() result
  * @param opts.labels  'degrees' | 'notes'
  * @param opts.bar     0-based bar to emphasise, or null for the whole lick
+ * @param opts.selected  note indexes being edited (ringed)
  */
-export function renderNeck(analysis, { labels = 'degrees', bar = null } = {}) {
+export function renderNeck(analysis, { labels = 'degrees', bar = null, selected = [] } = {}) {
+  const picked = new Set(selected);
   const { lo, hi } = neckRange(analysis.span);
   const showNut = lo === 0;
   const cols = hi - lo + 1;
@@ -81,17 +83,18 @@ export function renderNeck(analysis, { labels = 'degrees', bar = null } = {}) {
   for (const n of analysis.notes) {
     if (n.string < 0 || n.string > 5 || n.fret < lo || n.fret > hi) continue;
     const key = `${n.string}:${n.fret}`;
-    const entry = seen.get(key) || { ...n, bars: new Set(), bent: false };
+    const entry = seen.get(key) || { ...n, bars: new Set(), bent: false, picked: false };
     entry.bars.add(n.bar);
+    entry.picked = entry.picked || picked.has(n.index);
     entry.bent = entry.bent || n.bendTo != null;
     seen.set(key, entry);
   }
   for (const n of seen.values()) {
     const role = noteRole(n.degree, analysis);
     const now = bar == null || n.bars.has(bar);
-    const cls = `dot lick ${role}${now ? '' : ' dim'}${bar != null && now ? ' now' : ''}`;
+    const cls = `dot lick ${role}${now ? '' : ' dim'}${bar != null && now ? ' now' : ''}${n.picked ? ' picked' : ''}`;
     const bend = n.bent ? `<text class="bend" x="${x(n.fret) + 13}" y="${y(n.string) - 8}">↗</text>` : '';
-    parts.push(`<g class="${cls}"><circle cx="${x(n.fret)}" cy="${y(n.string)}" r="11" /><text x="${x(n.fret)}" y="${y(n.string) + 4}">${esc(label(n.pc))}</text>${bend}</g>`);
+    parts.push(`<g class="${cls}" data-pos="${n.string}:${n.fret}" tabindex="0" role="button" aria-label="${['E', 'A', 'D', 'G', 'B', 'e'][n.string]} string fret ${n.fret}, the ${esc(n.degree)}"><circle cx="${x(n.fret)}" cy="${y(n.string)}" r="11" /><text x="${x(n.fret)}" y="${y(n.string) + 4}">${esc(label(n.pc))}</text>${bend}</g>`);
   }
   parts.push('</svg>');
   return parts.join('');

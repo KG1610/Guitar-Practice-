@@ -1,12 +1,20 @@
 /**
  * Riff Room "Theory" panel: the lick on the neck, what it is made of, the
- * scale in one card, and "make it yours" exercises. Fed by the riff's
- * alphaTex and key; follows the playing bar.
+ * scale in one card, "make it yours" exercises, and a fret fixer for notes
+ * the tab reader got wrong. Fed by the riff's alphaTex and key; follows the
+ * playing bar.
  */
+import * as Tone from 'tone';
 import { notesFromTex } from '../theory/notes.js';
-import { analyzeLick } from '../theory/analyze.js';
+import { analyzeLick, STRING_PCS } from '../theory/analyze.js';
 import { explainLick } from '../theory/lessons.js';
 import { renderNeck } from '../theory/neck.js';
+import { degreeOf, pcName } from '../theory/scales.js';
+import { replaceNotes, texNotesMatch } from '../theory/texedit.js';
+
+const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'];
+/** MIDI note of each open string, low E → high e. */
+const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
 
 function esc(value) {
   return String(value).replace(/[&<>"']/g, (ch) => ({
@@ -15,6 +23,7 @@ function esc(value) {
 }
 
 export function theoryPanelHtml() {
+  const strings = STRING_NAMES.map((name, i) => `<option value="${i}">${name}</option>`).reverse().join('');
   return `
     <section class="riff-panel theory-panel" id="riff-theory" aria-label="Theory">
       <div class="grid-head">
@@ -40,7 +49,23 @@ export function theoryPanelHtml() {
           <span class="key outside"></span>Outside the scale
           <span class="key ghost"></span>Rest of the scale
         </p>
-        <div id="theory-bars" class="theory-bars" aria-label="Degrees bar by bar"></div>
+        <p class="riff-note theory-fix-hint" id="theory-fix-hint">Click a note to hear it. If it sounds wrong against the video, fix its fret.</p>
+        <div id="theory-bars" class="theory-bars" aria-label="Notes bar by bar"></div>
+        <div id="theory-editor" class="theory-editor" hidden>
+          <p id="theory-edit-what" class="theory-edit-what"></p>
+          <div class="theory-edit-row">
+            <label class="riff-inline">String <select id="theory-edit-string">${strings}</select></label>
+            <label class="riff-inline">Fret <input id="theory-edit-fret" type="number" min="0" max="24" /></label>
+            <output id="theory-edit-result" class="theory-edit-result"></output>
+          </div>
+          <label class="check riff-inline" id="theory-edit-all-label"><input type="checkbox" id="theory-edit-all" /><span id="theory-edit-all-text"></span></label>
+          <div class="theory-edit-row">
+            <button type="button" id="theory-edit-hear">Hear it</button>
+            <button type="button" id="theory-edit-apply" class="primary">Apply fix</button>
+            <button type="button" id="theory-edit-cancel">Close</button>
+          </div>
+        </div>
+        <p class="theory-undo-row"><button type="button" id="theory-undo" hidden>Undo last fix</button><span id="theory-edit-status" class="riff-note"></span></p>
         <div class="theory-cols">
           <div>
             <h4>What it's made of</h4>
@@ -50,7 +75,7 @@ export function theoryPanelHtml() {
             <h4 id="theory-concept-title"></h4>
             <p id="theory-formula" class="theory-formula"></p>
             <p id="theory-concept-text"></p>
-            <button type="button" id="theory-jam">Jam this scale on the Desk</button>
+            <button type="button" id="theory-jam">Jam this on the Desk</button>
           </div>
         </div>
         <h4>Make it yours</h4>
@@ -61,17 +86,29 @@ export function theoryPanelHtml() {
 
 /**
  * @param root      element containing theoryPanelHtml()
- * @param handlers  { onLoopBar(barIndex0), onJam({ rootPc, scaleId, patternId }) }
+ * @param handlers  { onLoopBar(barIndex0), onJam({ rootPc, scaleId, patternId }), onTexChange(tex) }
  */
 export function mountTheoryPanel(root, handlers = {}) {
   const q = (sel) => root.querySelector(sel);
-  const view = { analysis: null, labels: 'degrees', follow: true, bar: null };
+  const view = {
+    analysis: null,
+    tex: '',
+    key: '',
+    editable: false,
+    labels: 'degrees',
+    follow: true,
+    bar: null,
+    selected: null, // { index, same: [indexes at the same string/fret] }
+    undo: [],
+  };
+  let pluck = null;
 
   root.querySelectorAll('[data-labels]').forEach((btn) => {
     btn.addEventListener('click', () => {
       view.labels = btn.dataset.labels;
       root.querySelectorAll('[data-labels]').forEach((b) => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
       paintNeck();
+      paintBars();
     });
   });
   q('[data-follow]').addEventListener('click', () => {
@@ -89,10 +126,154 @@ export function mountTheoryPanel(root, handlers = {}) {
     });
   });
 
+  // Fret fixer
+  q('#theory-neck').addEventListener('click', (event) => {
+    const dot = event.target.closest('[data-pos]');
+    if (!dot) return;
+    const [string, fret] = dot.dataset.pos.split(':').map(Number);
+    const here = view.analysis.notes.filter((n) => n.string === string && n.fret === fret);
+    const inBar = here.find((n) => n.bar === view.bar) || here[0];
+    if (inBar) select(inBar.index);
+  });
+  q('#theory-neck').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.target.closest('[data-pos]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
+  });
+  q('#theory-edit-string').addEventListener('change', () => { paintEditResult(); hearDraft(); });
+  q('#theory-edit-fret').addEventListener('input', () => { paintEditResult(); hearDraft(); });
+  q('#theory-edit-hear').addEventListener('click', hearDraft);
+  q('#theory-edit-cancel').addEventListener('click', () => select(null));
+  q('#theory-edit-apply').addEventListener('click', applyFix);
+  q('#theory-undo').addEventListener('click', () => {
+    const previous = view.undo.pop();
+    if (previous == null) return;
+    handlers.onTexChange?.(previous);
+    q('#theory-edit-status').textContent = 'Undone.';
+    q('#theory-undo').hidden = view.undo.length === 0;
+  });
+
+  function noteByIndex(index) {
+    return view.analysis?.notes.find((n) => n.index === index) ?? null;
+  }
+
+  function draft() {
+    const string = Number(q('#theory-edit-string').value);
+    const fret = Math.max(0, Math.min(24, Math.round(Number(q('#theory-edit-fret').value) || 0)));
+    const midi = OPEN_MIDI[string] + fret;
+    return { string, fret, midi, pc: (STRING_PCS[string] + fret) % 12 };
+  }
+
+  async function play(midi) {
+    try {
+      await Tone.start();
+      if (!pluck) pluck = new Tone.PluckSynth({ attackNoise: 1.2, dampening: 3800, resonance: 0.92 }).toDestination();
+      pluck.triggerAttack(Tone.Frequency(midi, 'midi').toFrequency(), Tone.now() + 0.01);
+    } catch {
+      /* audio blocked until the first click; ignore */
+    }
+  }
+
+  function hearDraft() {
+    if (view.selected) play(draft().midi);
+  }
+
+  function select(index) {
+    const note = index == null ? null : noteByIndex(index);
+    if (!note) {
+      view.selected = null;
+      q('#theory-editor').hidden = true;
+      paintNeck();
+      paintBars();
+      return;
+    }
+    play(note.midi);
+    const same = view.analysis.notes.filter((n) => n.string === note.string && n.fret === note.fret).map((n) => n.index);
+    view.selected = { index, same };
+    const editor = q('#theory-editor');
+    editor.hidden = !view.editable;
+    if (view.editable) {
+      q('#theory-edit-what').textContent = `Bar ${note.bar + 1}, beat ${(note.beat + 1).toFixed(2).replace(/\.?0+$/, '')}: ${STRING_NAMES[note.string]} string, fret ${note.fret} (${pcName(note.pc)}, the ${note.degree}).`;
+      q('#theory-edit-string').value = String(note.string);
+      q('#theory-edit-fret').value = String(note.fret);
+      q('#theory-edit-all').checked = false;
+      q('#theory-edit-all-label').hidden = same.length < 2;
+      q('#theory-edit-all-text').textContent = `Change all ${same.length} notes at this spot`;
+      paintEditResult();
+    }
+    paintNeck();
+    paintBars();
+  }
+
+  function paintEditResult() {
+    if (!view.selected || !view.analysis) return;
+    const d = draft();
+    const degree = degreeOf(d.pc, view.analysis.key.rootPc);
+    const inScale = view.analysis.scale.intervals.includes((((d.pc - view.analysis.key.rootPc) % 12) + 12) % 12);
+    q('#theory-edit-result').textContent = `→ ${pcName(d.pc)}, the ${degree}${inScale ? '' : ' (outside the scale)'}`;
+  }
+
+  function applyFix() {
+    if (!view.selected || !view.editable) return;
+    const d = draft();
+    const note = noteByIndex(view.selected.index);
+    const indexes = q('#theory-edit-all').checked ? view.selected.same : [view.selected.index];
+    const next = replaceNotes(view.tex, indexes, { fret: d.fret, string: d.string });
+    if (next === view.tex) {
+      select(null);
+      return;
+    }
+    view.undo.push(view.tex);
+    if (view.undo.length > 20) view.undo.shift();
+    q('#theory-undo').hidden = false;
+    const where = indexes.length > 1 ? `${indexes.length} notes` : `bar ${note.bar + 1}`;
+    q('#theory-edit-status').textContent = `Fixed ${where}: ${STRING_NAMES[note.string]} ${note.fret} → ${STRING_NAMES[d.string]} ${d.fret}.`;
+    view.selected = null;
+    q('#theory-editor').hidden = true;
+    handlers.onTexChange?.(next);
+  }
+
   function paintNeck() {
     if (!view.analysis) return;
     const bar = view.follow ? view.bar : null;
-    q('#theory-neck').innerHTML = renderNeck(view.analysis, { labels: view.labels, bar });
+    const selected = view.selected ? (q('#theory-edit-all')?.checked ? view.selected.same : [view.selected.index]) : [];
+    q('#theory-neck').innerHTML = renderNeck(view.analysis, { labels: view.labels, bar, selected });
+    root.querySelectorAll('.theory-bar').forEach((el) => {
+      el.classList.toggle('now', bar != null && Number(el.dataset.bar) === bar);
+    });
+  }
+
+  function paintBars() {
+    const a = view.analysis;
+    if (!a) return;
+    const byBar = new Map();
+    for (const n of a.notes) {
+      if (!byBar.has(n.bar)) byBar.set(n.bar, []);
+      byBar.get(n.bar).push(n);
+    }
+    const picked = view.selected?.index;
+    q('#theory-bars').innerHTML = [...byBar.entries()].map(([bar, notes]) => `
+      <div class="theory-bar" data-bar="${bar}">
+        <div class="theory-bar-head">
+          <span class="theory-bar-num">Bar ${bar + 1}</span>
+          <button type="button" class="theory-bar-loop" data-loop="${bar}" title="Loop bar ${bar + 1}">Loop</button>
+        </div>
+        <div class="theory-bar-notes">${notes.map((n, i) => {
+          const chord = i > 0 && notes[i - 1].beat === n.beat;
+          const label = view.labels === 'notes' ? pcName(n.pc) : n.degree;
+          const bend = n.bendTo != null ? `↗${view.labels === 'notes' ? pcName(n.bendTo) : degreeOf(n.bendTo, a.key.rootPc)}` : '';
+          const cls = `note-chip${n.inScale ? '' : ' outside'}${chord ? ' chord' : ''}${n.index === picked ? ' picked' : ''}`;
+          return `<button type="button" class="${cls}" data-index="${n.index}" title="${STRING_NAMES[n.string]} string, fret ${n.fret}">${esc(label)}${esc(bend)}</button>`;
+        }).join('')}</div>
+      </div>`).join('');
+    root.querySelectorAll('.note-chip').forEach((el) => {
+      el.addEventListener('click', () => select(Number(el.dataset.index)));
+    });
+    root.querySelectorAll('[data-loop]').forEach((el) => {
+      el.addEventListener('click', () => handlers.onLoopBar?.(Number(el.dataset.loop)));
+    });
+    const bar = view.follow ? view.bar : null;
     root.querySelectorAll('.theory-bar').forEach((el) => {
       el.classList.toggle('now', bar != null && Number(el.dataset.bar) === bar);
     });
@@ -100,11 +281,17 @@ export function mountTheoryPanel(root, handlers = {}) {
 
   /** Re-run the analysis for a riff's tab and key. */
   function update({ alphatex, key }) {
-    const { notes, error } = notesFromTex(alphatex || '');
-    const analysis = notes.length ? analyzeLick(notes, { key }) : null;
+    const tex = alphatex || '';
+    if (tex !== view.tex) view.selected = null;
+    if (key !== undefined) view.key = key;
+    const { notes, total, error } = notesFromTex(tex);
+    const analysis = notes.length ? analyzeLick(notes, { key: view.key }) : null;
+    view.tex = tex;
     view.analysis = analysis;
+    view.editable = Boolean(analysis) && texNotesMatch(tex, total);
     q('#theory-body').hidden = !analysis;
     q('#theory-empty').hidden = Boolean(analysis);
+    q('#theory-editor').hidden = true;
     if (!analysis) {
       q('#theory-empty').textContent = error
         ? `The playable tab has an error, so there is nothing to analyse yet (${error}).`
@@ -112,6 +299,9 @@ export function mountTheoryPanel(root, handlers = {}) {
       q('#theory-sub').textContent = '';
       return null;
     }
+    q('#theory-fix-hint').textContent = view.editable
+      ? 'Click a note to hear it. If it sounds wrong against the video, fix its fret.'
+      : 'Click a note to hear it. Fret fixing is off for this tab: it uses syntax the fixer does not know, so use Edit alphaTex.';
     const text = explainLick(analysis);
     q('#theory-headline').textContent = text.headline;
     q('#theory-sub').textContent = text.sub;
@@ -124,16 +314,17 @@ export function mountTheoryPanel(root, handlers = {}) {
     q('#theory-prompts').innerHTML = text.prompts
       .map((p) => `<li><strong>${esc(p.title)}</strong><span>${esc(p.text)}</span></li>`)
       .join('');
-    q('#theory-bars').innerHTML = analysis.bars.map((b) => `
-      <button type="button" class="theory-bar" data-bar="${b.bar}" title="Loop bar ${b.bar + 1}">
-        <span class="theory-bar-num">Bar ${b.bar + 1}</span>
-        <span class="theory-bar-degrees">${b.degrees.map(esc).join(' ')}</span>
-      </button>`).join('');
-    root.querySelectorAll('.theory-bar').forEach((el) => {
-      el.addEventListener('click', () => handlers.onLoopBar?.(Number(el.dataset.bar)));
-    });
+    paintBars();
     paintNeck();
     return analysis;
+  }
+
+  /** A different riff: forget its undo history. */
+  function reset() {
+    view.undo = [];
+    view.selected = null;
+    q('#theory-undo').hidden = true;
+    q('#theory-edit-status').textContent = '';
   }
 
   /** Called as the video plays; bar is 0-based, or null before bar 1. */
@@ -144,5 +335,5 @@ export function mountTheoryPanel(root, handlers = {}) {
     if (view.follow) paintNeck();
   }
 
-  return { update, setBar, get analysis() { return view.analysis; } };
+  return { update, reset, setBar, get analysis() { return view.analysis; } };
 }

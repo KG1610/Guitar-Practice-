@@ -164,3 +164,66 @@
   /* Keep labels readable on a phone; the neck scrolls sideways in its box. */
   .theory-neck-svg { min-width: 560px; max-height: none; }
 }
+
+/* Bar-by-bar note chips and the fret fixer */
+.theory-fix-hint { margin-top: 0.8rem; }
+.theory-bar { cursor: default; }
+.theory-bar-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.theory-bar-loop {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  border-radius: 8px;
+  padding: 0.1rem 0.45rem;
+  cursor: pointer;
+}
+.theory-bar-loop:hover { color: var(--ember-2); border-color: var(--ember); }
+.theory-bar-notes { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; }
+.note-chip {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--text);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  border-radius: 7px;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+}
+.note-chip.chord { margin-left: -0.2rem; border-left-style: dotted; }
+.note-chip.outside { border-color: #f87171; color: #fecaca; }
+.note-chip.picked, .note-chip:hover { border-color: var(--ember); background: var(--ember-dim); color: var(--ember-2); }
+.theory-neck-svg .lick { cursor: pointer; }
+.theory-neck-svg .lick.picked circle { stroke: var(--ember-2); stroke-width: 4; }
+
+.theory-editor {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--ember);
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.theory-editor[hidden] { display: none; }
+.theory-edit-what { margin: 0; }
+.theory-edit-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.theory-edit-result { color: var(--ember-2); font-weight: 650; }
+.theory-editor button, #theory-undo {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+.theory-editor button.primary { background: var(--ember); color: var(--ink); border: 0; }
+.theory-undo-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.5rem 0 0; min-height: 1.2rem; }
+#theory-edit-all-label[hidden], #theory-undo[hidden] { display: none; }
