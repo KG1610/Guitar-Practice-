@@ -1,5 +1,5 @@
-import { currentTracks, formLength, stepsPerBar } from './glory-form.js';
-import { state } from './glory-state.js';
+import { currentTracks, formLength, stepsPerBar } from './form.js';
+import { state } from './state.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const CX = 210;

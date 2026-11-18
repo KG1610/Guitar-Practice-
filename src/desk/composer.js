@@ -1,5 +1,5 @@
-import { state } from './glory-state.js';
-import { currentBar, currentTracks, formLength } from './glory-form.js';
+import { state } from './state.js';
+import { currentBar, currentTracks, formLength } from './form.js';
 
 export const CUSTOMS_KEY = 'practice-desk-customs-v1';
 

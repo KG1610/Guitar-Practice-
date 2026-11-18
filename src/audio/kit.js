@@ -1,5 +1,17 @@
 import * as Tone from 'tone';
 
+/** Base pitch of the hi-hat MetalSynth. */
+export const HAT_FREQ = 280;
+
+/**
+ * MetalSynth is monophonic: triggerAttackRelease(note, duration, time, velocity).
+ * Passing the duration first shifts every argument and the hit fires "now"
+ * instead of on the scheduled time, so always go through this helper.
+ */
+export function playHat(hat, time, velocity) {
+  hat.triggerAttackRelease(HAT_FREQ, '32n', time, velocity);
+}
+
 export function createAudio() {
   const kitGain = new Tone.Gain(1).toDestination();
   const clickGain = new Tone.Gain(0.9).toDestination();
@@ -27,7 +39,7 @@ export function createAudio() {
   snareBody.volume.value = -7;
 
   const hat = new Tone.MetalSynth({
-    frequency: 280,
+    frequency: HAT_FREQ,
     envelope: { attack: 0.001, decay: 0.07, release: 0.02 },
     harmonicity: 5.1,
     modulationIndex: 32,

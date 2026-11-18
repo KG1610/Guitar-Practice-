@@ -1,4 +1,4 @@
-import { state } from './glory-state.js';
+import { state } from './state.js';
 
 export function stepsPerBar() {
   return state.pattern?.stepsPerBar ?? 16;

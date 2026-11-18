@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { createAudio } from './glory-audio.js';
+import { createAudio, playHat } from '../audio/kit.js';
 
 export const DRUM_PATTERNS = {
   rock: {
@@ -70,7 +70,7 @@ export function createRiffDrums() {
       audio.snareNoise.triggerAttackRelease('16n', when);
       audio.snareBody.triggerAttackRelease('G2', '32n', when);
     }
-    if (pattern.hat[index]) audio.hat.triggerAttackRelease('32n', when, undefined, beat ? 0.4 : 0.28);
+    if (pattern.hat[index]) playHat(audio.hat, when, beat ? 0.4 : 0.28);
   }
 
   return { setVolume, setEnabled, setPattern, hit, get patternId() { return patternId; } };

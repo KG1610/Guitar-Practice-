@@ -14,10 +14,6 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1220'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%232dd4bf'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/glory.css" />
-    <link rel="stylesheet" href="/composer.css" />
-    <link rel="stylesheet" href="/riff-room.css" />
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -58,7 +54,7 @@
         </div>
         <label class="bpm-slider bpm-slider-hero">
           <span>Tempo</span>
-          <input id="bpm" type="range" min="50" max="180" value="90" />
+          <input id="bpm" type="range" min="30" max="250" value="90" />
         </label>
         <p id="status" class="status" aria-live="polite">Ready - space to play</p>
         <div id="beat-pads" class="pads" aria-hidden="true"></div>
@@ -151,11 +147,11 @@
             <div class="ramp-row">
               <label class="field">
                 <span>Start</span>
-                <input id="ramp-start" type="number" min="50" max="160" value="70" />
+                <input id="ramp-start" type="number" min="30" max="250" value="70" />
               </label>
               <label class="field">
                 <span>Target</span>
-                <input id="ramp-target" type="number" min="50" max="180" value="120" />
+                <input id="ramp-target" type="number" min="30" max="250" value="120" />
               </label>
               <label class="field">
                 <span>Bars</span>
@@ -170,7 +166,7 @@
         </details>
       </section>
 
-      <section class="debug-panel" aria-label="Debug">
+      <section class="debug-panel" aria-label="Debug" hidden>
         <div class="grid-head">
           <span class="grid-title">Debug</span>
           <span id="debug-hud" class="debug-hud">idle</span>
@@ -180,6 +176,6 @@
       </section>
     </main>
     <section id="riff-room" class="riff-room" aria-label="Riff Room"></section>
-    <script type="module" src="/main.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

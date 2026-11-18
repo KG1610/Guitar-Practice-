@@ -1,13 +1,38 @@
 import * as Tone from 'tone';
-import { deskApi } from './glory-bridge.js';
-import { DRUM_PATTERNS, createDrumSync, createRiffDrums } from './riff-drums.js';
-import { beatsFromMedia, mountPlayableTab } from './riff-tab.js';
-import { keyToFretboard } from './riff-keys.js';
+import { deskApi } from '../bridge.js';
+import { DRUM_PATTERNS, createDrumSync, createRiffDrums } from './drums.js';
+import { beatsFromMedia, mountPlayableTab } from './tab.js';
+import { keyToFretboard } from './keys.js';
+
+/** Slowest playback rate; fast shred licks often need 30–40% to hear every note. */
+const MIN_SPEED = 0.25;
 
 const KEYS = [
   'A minor', 'C major', 'E minor', 'G major', 'D minor', 'F major',
   'B minor', 'D major', 'F# minor', 'A major', 'C# minor', 'E major',
 ];
+
+const HELPER_DOWN = 'The Riff Room helper is not running. Start the app with ./launch.';
+
+/**
+ * Call the local helper. Never throws: a stopped helper or a non-JSON reply
+ * comes back as { ok: false, body: { error } } so callers can show a message.
+ */
+async function api(path, options) {
+  let res;
+  try {
+    res = await fetch(path, options);
+  } catch {
+    return { ok: false, body: { error: HELPER_DOWN } };
+  }
+  let body = {};
+  try {
+    body = await res.json();
+  } catch {
+    body = { error: res.ok ? 'Unexpected reply from the helper' : HELPER_DOWN };
+  }
+  return { ok: res.ok, body };
+}
 
 export function mountRiffRoom(root) {
   root.innerHTML = template();
@@ -34,6 +59,8 @@ export function mountRiffRoom(root) {
     taps: [],
     speed: 1,
     speedTimer: 0,
+    helperUp: false,
+    toolsMissing: false,
   };
 
   function setView(next) {
@@ -217,13 +244,12 @@ export function mountRiffRoom(root) {
     const url = q('#riff-url').value.trim();
     if (!url) return;
     setStatus('Sending the link to the local helper…');
-    const res = await fetch('/api/riffs/import', {
+    const { ok, body } = await api('/api/riffs/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     });
-    const body = await res.json();
-    if (!res.ok) {
+    if (!ok) {
       setStatus(body.error || 'Import failed');
       return;
     }
@@ -235,9 +261,8 @@ export function mountRiffRoom(root) {
     data.append('file', file);
     data.append('title', file.name.replace(/\.[^.]+$/, ''));
     setStatus('Reading the file locally…');
-    const res = await fetch('/api/riffs/upload', { method: 'POST', body: data });
-    const body = await res.json();
-    if (!res.ok) {
+    const { ok, body } = await api('/api/riffs/upload', { method: 'POST', body: data });
+    if (!ok) {
       setStatus(body.error || 'Upload failed');
       return;
     }
@@ -246,8 +271,12 @@ export function mountRiffRoom(root) {
 
   async function poll(jobId, { quiet = false } = {}) {
     const timer = setInterval(async () => {
-      const res = await fetch(`/api/jobs/${jobId}`);
-      const job = await res.json();
+      const { ok, body: job } = await api(`/api/jobs/${jobId}`);
+      if (!ok) {
+        clearInterval(timer);
+        setStatus(job.error || 'Lost track of the import');
+        return;
+      }
       if (job.status === 'done') {
         clearInterval(timer);
         await refreshList(job.riff?.id);
@@ -270,8 +299,11 @@ export function mountRiffRoom(root) {
       const res = await fetch('/api/riffs');
       if (!res.ok) throw new Error('helper');
       state.library = (await res.json()).riffs || [];
-      q('#riff-helper').hidden = true;
+      state.helperUp = true;
+      // Keep a "missing ffmpeg / yt-dlp" notice from the health check visible.
+      if (!state.toolsMissing) q('#riff-helper').hidden = true;
     } catch {
+      state.helperUp = false;
       q('#riff-helper').hidden = false;
       state.library = [];
     }
@@ -340,13 +372,13 @@ export function mountRiffRoom(root) {
   }
 
   async function openRiffById(id) {
-    const res = await fetch(`/api/riffs/${id}`);
-    if (!res.ok) {
-      setStatus('That song is no longer in the library');
+    const { ok, body } = await api(`/api/riffs/${id}`);
+    if (!ok) {
+      setStatus(body.error === HELPER_DOWN ? HELPER_DOWN : 'That song is no longer in the library');
       await refreshList();
       return;
     }
-    openRiff(await res.json());
+    openRiff(body);
   }
 
   function openRiff(riff) {
@@ -354,7 +386,7 @@ export function mountRiffRoom(root) {
     state.loopA = riff.loopA ?? null;
     state.loopB = riff.loopB ?? null;
     state.loop = riff.loopClip !== false;
-    state.speed = Math.min(1, Math.max(0.5, Number(riff.speed) || 1));
+    state.speed = Math.min(1, Math.max(MIN_SPEED, Number(riff.speed) || 1));
     q('#riff-loop').setAttribute('aria-pressed', state.loop ? 'true' : 'false');
     q('#riff-speed').value = String(Math.round(state.speed * 100));
     video.playbackRate = state.speed;
@@ -444,9 +476,8 @@ export function mountRiffRoom(root) {
 
   async function syncQueue() {
     setStatus('Checking the song queue…');
-    const res = await fetch('/api/queue/sync', { method: 'POST' });
-    const body = await res.json();
-    if (!res.ok) {
+    const { ok, body } = await api('/api/queue/sync', { method: 'POST' });
+    if (!ok) {
       setStatus(body.error || 'Sync failed');
       return;
     }
@@ -455,13 +486,16 @@ export function mountRiffRoom(root) {
 
   async function savePatch(patch) {
     if (!state.riff) return;
-    const res = await fetch(`/api/riffs/${state.riff.id}`, {
+    const { ok, body } = await api(`/api/riffs/${state.riff.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     });
-    if (!res.ok) return;
-    state.riff = await res.json();
+    if (!ok) {
+      setStatus(body.error || 'Could not save that change');
+      return;
+    }
+    state.riff = body;
     sync.configure({
       bpm: Number(state.riff.bpm) || 80,
       offset: Number(state.riff.downbeatOffset) || 0,
@@ -508,6 +542,7 @@ export function mountRiffRoom(root) {
       if (!body.ffmpeg) missing.push('ffmpeg');
       if (!body.ytdlp) missing.push('yt-dlp');
       if (missing.length) {
+        state.toolsMissing = true;
         q('#riff-helper').hidden = false;
         q('#riff-helper').textContent = `Install ${missing.join(' and ')} (brew install ffmpeg yt-dlp) for link import. A video file still works.`;
       }
@@ -516,7 +551,7 @@ export function mountRiffRoom(root) {
     }
     await refreshList();
     if (state.library[0]) await openRiffById(state.library[0].id);
-    syncQueue();
+    if (state.helperUp) syncQueue();
   }
 
   boot();
@@ -555,7 +590,7 @@ function template() {
       </div>
       <p class="riff-status" id="riff-status">Paste a Facebook, Instagram, or YouTube link.</p>
     </div>
-    <p class="riff-helper" id="riff-helper" hidden>The local helper is not running. Start the desk with <code>npm run dev</code>.</p>
+    <p class="riff-helper" id="riff-helper" hidden>The local helper is not running. Start the app with <code>./launch</code>.</p>
     <form class="riff-import" onsubmit="return false">
       <label class="riff-url">
         <span class="sr">Video link</span>
@@ -603,7 +638,7 @@ function template() {
           <span id="riff-ab-readout">Whole clip</span>
         </div>
         <label class="riff-slider">Speed <output id="riff-speed-readout">100% · kit 80 BPM</output>
-          <input id="riff-speed" type="range" min="50" max="100" value="100" />
+          <input id="riff-speed" type="range" min="25" max="100" value="100" />
         </label>
         <label class="riff-slider">Video
           <input id="riff-video-vol" type="range" min="0" max="100" value="80" />

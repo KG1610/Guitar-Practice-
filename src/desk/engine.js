@@ -1,8 +1,9 @@
 import * as Tone from 'tone';
-import { state } from './glory-state.js';
+import { state } from './state.js';
+import { playHat } from '../audio/kit.js';
 import {
   stepsPerBar, syllablesFor, formBars, formLength, isMultiBar, currentBar, currentTracks,
-} from './glory-form.js';
+} from './form.js';
 
 export function createEngine(ui, audio) {
   const {
@@ -180,7 +181,7 @@ export function createEngine(ui, audio) {
         snareBody.triggerAttackRelease('G2', '32n', time);
         Tone.getDraw().schedule(() => emitDrumEvent('snare', stepIndex, time, barSnap), time);
       }
-      if (tracks.hat?.[stepIndex]) hat.triggerAttackRelease('32n', time, undefined, 0.32);
+      if (tracks.hat?.[stepIndex]) playHat(hat, time, 0.32);
     }
 
     if (isBeat) Tone.getDraw().schedule(() => emitDrumEvent('beat', stepIndex, time, barSnap), time);

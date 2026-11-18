@@ -54,7 +54,7 @@ If that request fails (the file is not on `main` yet, or the machine is offline)
 ```
 
 `url` is required (Facebook, Instagram, or YouTube). `title`, `notes`, and `added` (`YYYY-MM-DD`) are optional. A bare array of those objects is accepted too. The queue currently starts with the A minor reel above.
-3. The player loops the whole clip or an A–B section. Speed is 50–100% with pitch preserved (`preservesPitch`). The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
+3. The player loops the whole clip or an A–B section. Speed is 25–100% with pitch preserved (`preservesPitch`). The Tone.js kit plays a simple rock beat at the riff's BPM, scaled with the slowdown, on the same clock as the loop.
 4. Tempo and key come from the audio, then get corrected. An onset detector often locks onto double-time (a busy lick can read ~160 when the title says 80). The yellow current-bar in the video is a second clock: if the highlight advances about once every 3 seconds, that is 80 BPM. A printed "80 bpm" or "A minor" in the title or description wins when it agrees with an audio harmonic or a relative key. Tap tempo, ÷2, ×2, the BPM field, the key menu, and the downbeat offset are always there.
 5. **Tab image** is the scrolling Guitar Pro strip stitched into one picture, yellow wash removed. **Playable tab** is alphaTex rendered by alphaTab, horizontal like Songsterr, with a cursor that follows the video (and the slowdown). The alphaTex box is editable — apply it if a fret is wrong.
 
@@ -78,7 +78,7 @@ Den Kondrashev, "Easy A Minor Guitar Solo 80 bpm for practise + tabs", Facebook 
 
 The stitched image is the thing to trust while you correct the playable tab. Nothing from the reel is committed; `riffs-library/` stays on the machine.
 
-## Glory features
+## Desk features
 
 - **Multi-bar forms** — patterns can define a `form` array of 4–8 bars; the player advances bar-by-bar then loops the whole form. Grid + playhead follow the current bar.
 - **Chorus lift / verse chug** — original multi-bar metalcore practice beds (inspired energy, not transcriptions).
@@ -171,4 +171,18 @@ Neck drills pulse matching notes from drum events while the kit/click runs.
 
 ## Stack
 
-Vite + Tone.js synth kit. No sample licenses.
+Vite + Tone.js synth kit. No sample licenses. Tempo runs 30–250 BPM. Open the app with `?debug` to show the debug panel.
+
+## Code layout
+
+```
+index.html          page shell
+src/main.js         boots the Desk and the Riff Room
+src/desk/           drum desk: transport (app.js), step engine, forms, composer, presets, geometry, session
+src/audio/kit.js    the Tone.js kit shared by both views
+src/theory/         fretboard and scales
+src/riff/           Riff Room: player, drum sync, playable tab, key → fretboard
+src/styles/         CSS
+patterns/           drum pattern JSON
+server/             local Python helper (download, analysis, tab reading)
+```

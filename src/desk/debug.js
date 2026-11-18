@@ -33,6 +33,9 @@ export function debugError(msg, err) {
 }
 
 export function mountDebug() {
+  // The panel is for troubleshooting; open the app with ?debug to show it.
+  const panel = document.querySelector('.debug-panel');
+  if (panel && new URLSearchParams(location.search).has('debug')) panel.hidden = false;
   paint();
   window.addEventListener('error', (e) => debugError('window', e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => debugError('promise', e.reason));
